@@ -326,15 +326,28 @@ module_joe_model_run_server <- function(id) {
         
           
           print("Finished the Joe Model run...")
+          
           # Store the scenario in the list object - index + 1 to prevent overwrite
           simulation_index <- length(session$userData$rv_joe_model_results$sims) + 1
           
           # Store the Joe Model results in this list object
           session$userData$rv_joe_model_results$sims[[simulation_index]] <- jm
-
+          
           # Also store the name of the simulation (if set by user)
           sim_name <- input$name_of_simulation
           session$userData$rv_joe_model_sim_names$scenario_names[[simulation_index]] <- sim_name
+          
+          # Store the scenario results - scenario comparison
+          # Thin down object
+          jm$ce.df$CE <- round(jm$ce.df$CE, 4)
+          jm$ce.df$simulation <- NULL
+          jm$ce.df$scenario_name <- sim_name
+          # Summarize variables
+          jm$sc.dose.df <- jm$sc.dose.df %>% group_by(Stressor) %>% 
+            summarise(m.sys.cap = mean(sys.cap, na.rm = TRUE))
+          jm$sc.dose.df$scenario_name <- sim_name
+          simulation_index_scenarios <- length(session$userData$rv_joe_model_results_scenarios$sims) + 1
+          session$userData$rv_joe_model_results_scenarios$sims[[simulation_index_scenarios]] <- jm
           
           # Update the active layer on the map to show 
           session$userData$rv_stressor_response$active_layer <- "system_capacity"

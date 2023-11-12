@@ -94,6 +94,16 @@ module_huc_results_ui <- function(id) {
             subtitle = "Plot the cumulative system capacity for all watersheds"
           ),
           
+          infoBox(
+            title = NULL,
+            color = 'blue',
+            value = module_scenario_csc_ui(ns("scenario_csc")),
+            icon = icon("sliders-h"),
+            subtitle = "Cumulative system capacity across scenarios"
+          ),
+          
+          
+          
         ),
         ), 
 
@@ -126,6 +136,7 @@ module_huc_results_server <- function(id) {
                  module_huc_stressor_magnitude_server("stressor_magnitude")
                  module_joe_model_run_server("run_joe_model")
                  module_joe_model_csc_plots_server("joe_model_csc_plots_all")
+                 module_scenario_csc_server("scenario_csc")
                  module_joe_model_csc_plots_selected_server("open_joe_modal_csc_plots_selected")
                  module_joe_vs_population_server("module_joe_vs_population")
                  

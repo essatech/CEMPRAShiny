@@ -85,7 +85,6 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
         
         # MJB added here June 6 2023
         
-        
         # Set the stressor response object as a reactive value
         if (!(is.na(stressor_index))) {
           
@@ -105,6 +104,18 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
          }
           
           if (!(is.na(current)) & !(is.na(active))) {
+            
+            # Special case for system_capacity
+            if (active == "system_capacity") {
+              q_code <- paste0("jQuery('#main_map-var_id').addClass('var-selected');")
+              shinyjs::runjs(code = q_code)
+            }
+            if (active != "system_capacity") {
+              q_code <- paste0("jQuery('#main_map-var_id').removeClass('var-selected');")
+              shinyjs::runjs(code = q_code)
+            }
+            
+            
             if (active == current) {
               # print("Adding class")
               q_code <- paste0("jQuery('#main_map-", current, "-var_id').addClass('var-selected');")
@@ -135,6 +146,8 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
         # Update reactive value of target variable selected
         updateActiveVar <- function(current) {
           print(paste0("User click.. update to layer... ", current))
+          # Set css color of system capacity button to light blue
+          
           session$userData$rv_stressor_response$active_layer <- current
         }
         # Use mouse click
@@ -273,7 +286,7 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
         req(session$userData$rv_stressor_response$active_layer)
 
         # Get all SR data
-        sr_data <- session$userData$rv_stressor_response$sr_dat
+        sr_data <- isolate(session$userData$rv_stressor_response$sr_dat)
         # Filter for target layer
         this_var <- session$userData$rv_stressor_response$active_layer # e.g., temperature
         table_vals <- sr_data[[this_var]] # e.g., temperature
@@ -304,7 +317,7 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
       })
 
       # Create a proxy for the above table
-      dt_proxy <- DT::dataTableProxy("stressor_response_dt")
+      dt_proxy <- DT::dataTableProxy("main_map-Foot_flow-stressor_response_dt")
 
 
       #-------------------------------------------------------
@@ -333,6 +346,8 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
       # When there is an edit to a cell
       # update the stessor response reactive values
       observeEvent(input$stressor_response_dt_cell_edit, {
+        
+        print("SR Cell Edit Event...")
 
         # Get new value of edited cell
         info <- input$stressor_response_dt_cell_edit
@@ -346,7 +361,7 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
         selected_raw <- session$userData$rv_clickedIds$ids
         # Fix format
         getID <- function(x) {
-          strsplit(x, "\\|")[[1]][1]
+           strsplit(x, "\\|")[[1]][1]
         }
         selected_ids <- lapply(selected_raw, getID) %>% unlist()
 
@@ -360,13 +375,32 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
         # Ensure value is ok
         if (j > 1) {
-          # Keep system capacity in bounds
+          # Keep system capacity within reasonable bounds
           k <- ifelse(k < 0, 0, k)
           k <- ifelse(k > 100, 100, k)
         }
 
         var <- c("value", "mean_system_capacity", "sd", "lwr", "upr")
-
+        
+        # Ensure that lower and upper bounds are never greater than or less than msc
+        srow_vals <- isolate(session$userData$rv_stressor_response$sr_dat[[this_var]][i,])
+        # Current mean system capacity
+        c_msc <- srow_vals$mean_system_capacity
+        
+        if (j == 4) { # lwr
+          # Lower bounds must always be less than msc
+          k <- ifelse(k > c_msc, c_msc, k)
+        }
+        if (j == 5) { # upr
+          # Upper bounds must always be greater than msc
+          k <- ifelse(k < c_msc, c_msc, k)
+        }
+        
+        # Update the table without reloading completely
+        updated_data_tmp <- isolate(session$userData$rv_stressor_response$sr_dat[[this_var]])
+        updated_data_tmp[i, j] <- k
+        replaceData(dt_proxy, updated_data_tmp, resetPaging = FALSE) 
+        # Set resetPaging to FALSE to keep the current paging
 
         # Update stressor response value
         session$userData$rv_stressor_response$sr_dat[[this_var]][i, j] <- k
@@ -375,6 +409,7 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
         # Also invalidate the cumulative system capacity score in the stressor magnitude table
         print("click csc invalidated...")
         session$userData$rv_clickedIds_csc$csc <- NA
+        
 
         
       })
@@ -419,12 +454,13 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
           dyAxis("y", label = "Mean System Capacity (%)") %>%
           dySeries(c("lwr", "mean_system_capacity", "upr"), label = "msc", color = "grey") %>%
           dySeries(c("lwr_sd", "mean_system_capacity", "upr_sd"), label = "Mean Sys. Cap.", color = "red")
+        
       })
 
 
 
       #------------------------------------------------------------------------
-      # render interaction matrix table
+      # render 2-factor interaction matrix table
       #------------------------------------------------------------------------
       output$interaction_matrix_main <- DT::renderDataTable({
           print("Rendering matrix intraction table...")

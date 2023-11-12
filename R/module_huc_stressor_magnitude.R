@@ -347,7 +347,7 @@ module_huc_stressor_magnitude_server <- function(id) {
                        columnDefs = list(list(
                          className = 'dt-left', targets = "_all"
                        ))
-                     )
+                     ),
                    )
                    
                  })

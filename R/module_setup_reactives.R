@@ -142,6 +142,13 @@ module_setup_reactives <- function(session = NA) {
   session$userData$rv_joe_model_results <- rv_joe_model_results
 
 
+# Joe model results holder - assume multiple runs
+rv_joe_model_results_scenarios <- reactiveValues(
+    sims = list()
+)
+session$userData$rv_joe_model_results_scenarios <- rv_joe_model_results_scenarios
+  
+  
 # Joe model scenario name holder - assume multiple runs
   rv_joe_model_sim_names <- reactiveValues(
     scenario_names = list()
