@@ -390,6 +390,12 @@ module_import_server <- function(id) {
             
             print("File loading....")
             
+            # Change rendering order
+            # we want small polygons in front and large polygons behind
+            print("Review order...")
+            hmdl$area <- st_area(hmdl)
+            hmdl <- arrange(hmdl, desc(area))
+            
             # Fix col names - if needed
             cnames <- colnames(hmdl)
             if(!("HUC_ID" %in% cnames)) {

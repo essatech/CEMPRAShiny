@@ -115,13 +115,18 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
               shinyjs::runjs(code = q_code)
             }
             
+            current_id <- current
+            # deal with space and jQuery ID
+            if(grepl(" ", current_id)) {
+              current_id <- gsub(" ", "\\\ ", current_id, fixed = TRUE)
+            }
             
             if (active == current) {
               # print("Adding class")
-              q_code <- paste0("jQuery('#main_map-", current, "-var_id').addClass('var-selected');")
+              q_code <- paste0("jQuery('#main_map-", current_id, "-var_id').addClass('var-selected');")
               shinyjs::runjs(code = q_code)
             } else {
-              q_code <- paste0("jQuery('#main_map-", current, "-var_id').removeClass('var-selected');")
+              q_code <- paste0("jQuery('#main_map-", current_id, "-var_id').removeClass('var-selected');")
               shinyjs::runjs(code = q_code)
             }
           }

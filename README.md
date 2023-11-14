@@ -7,22 +7,35 @@
 
 ## Developing a Cumulative Effects Modelling Framework for the Recovery of Aquatic Species at Risk
 
-This is the location of the Shiny UI associated with the [`CEMPRA`](https://github.com/essatech/CEMPRA) package. `CEMPRA` is a collection of functions to support the application of the <a href="https://waves-vagues.dfo-mpo.gc.ca/Library/40871344.pdf" target="_blank">Alberta Environmental Parks Cumulative Effects Assessment Joe Model (DFO 2019)</a>, coupled with a flexible population modelling framework.
+The Cumulative Effects Model for Prioritizing Recovery Actions (CEMPRA) is a cumulative effects modelling framework. The CEMPRA tool uses a series of standardized stressor-response functions to link environmental attributes to the system capacity and productivity of a target species/system. This framework design is as generalizable, simple, and versatile as possible so that users can apply the model to various geographic regions, contexts, systems, and species. As the name suggests, the CEMPRA tool helps prioritize recovery actions for data-limited species and species-at-risk, with the flexibility to  accommodate both data-rich and data-poor study systems. The CEMPRA tool is accessible as an open-source R package (https://github.com/essatech/CEMPRA) and R Shiny interactive web application (https://github.com/essatech/CEMPRAShiny).
 
-The `CEMPRA` package is part of a larger initiative to develop a framework for modelling cumulative impacts to Species at Risk (SAR) to guide recovery planning and adaptive management based on stressor-response functions related to taxa-specific threats.  This framework allows users to generate models across a range of complexity and data quality, treating stressor-response functions as modular entities.
+## Project Components
+
+-   GitHub Repository for R-Package (<https://github.com/essatech/CEMPRA>)
+-   GitHub Repository for R-Shiny Application (<https://github.com/essatech/CEMPRAShiny>)
+-   LIVE (online R-Shiny Application) (<https://essa.shinyapps.io/CEMPRAShiny/>)
+-   R-Package Tutorials (<https://essatech.github.io/CEMPRA/index.html>)
+-   Guidance Document: (<https://mattjbayly.github.io/CEMPRA_documentation/>)
 
 
-#### Contributors:
-This is a broad collaboration between Fisheries and Oceans Canada (DFO), B.C. Ministry of Environment and Climate Change Strategy (ECCS), Alberta Environment and Parks (AEP), and Simon Fraser University (SFU. 
+
+## Package Contributors:
+This is a broad collaboration between Fisheries and Oceans Canada (DFO), B.C. Ministry of Environment and Climate Change Strategy (ECCS), Alberta Environment and Parks (AEP), and Simon Fraser University (SFU). 
 
 Contributors include:
-
--   [Dr. Eva Enders](https://profils-profiles.science.gc.ca/en/profile/eva-enders): Project Lead; DFO Research Scientist
--   [Dr. Jordan Rosenfeld](http://www.aferu.ca/rosenfeld-lab): Project design and coordination; ECCS Aquatic Ecologist
--   [Dr. Andrew Paul](https://github.com/andrewpaul68): Collaborator; AEP Research Scientist
--   [Dr. Kyle Wilson](https://github.com/klwilson23): Population model development.
+-   [Matthew Bayly](https://github.com/mattjbayly): MJBA, Core application development.
+-   Alexandra Tekatch: ESSA, Core application development.
+-   [Jordan Rosenfeld](http://www.aferu.ca/rosenfeld-lab): Project design and coordination; ECCS Aquatic Ecologist
+-   [Lauren Jarvis](https://github.com/andrewpaul68): Collaborator; AEP Research Scientist
+-   [Andrew Paul](https://github.com/andrewpaul68): Collaborator; AEP Research Scientist
+-   [Eva Enders](https://profils-profiles.science.gc.ca/en/profile/eva-enders): Project Lead; DFO Research Scientist
+-   [Kyle Wilson](https://github.com/klwilson23): Population model development.
 -   [Isuru Dharmasena](https://www.linkedin.com/in/isuru-dharmasena-90269895/?originalSubdomain=ca): Core Shiny app development
--   [Matthew Bayly](https://github.com/mattjbayly), Marc Porter, Alejandra Urcelay, and [Julian Heavyside](https://github.com/julianheavyside) from [ESSA Technologies Ltd](https://essa.com/): R package and Shiny app development support.
+(https://github.com/julianheavyside) from [ESSA Technologies Ltd](https://essa.com/): R package and Shiny app development support.
+-   Alejandra Urcelay
+-   Pedro Gonzalez
+-   Marc Porter
+-   Julian Heavyside
 
 
 ## Features
@@ -35,11 +48,23 @@ Contributors include:
 ## Installation
 
 The easiest way to install the `CEMPRA` package is from within the [RStudio IDE](https://www.rstudio.com/products/rstudio/download/) using `remotes::install_github()`. At this time the package has not been published to CRAN so the default `install.packages()` will not work. Instead use remotes (or devtools):
+
 ``` r
+# Installing vis devtools
+# You may need to install remotes
+# install.packages("devtools")
+library(devtools)
+devtools::install_github("essatech/CEMPRA")
+
 # You may need to install remotes
 library(remotes)
 remotes::install_github("essatech/CEMPRA")
+
 ```
+
+See additional tutorials here:
+- [Setup and installation](https://mattjbayly.github.io/CEMPRA_documentation/04_initial_setup.html)
+- [Data inputs](https://mattjbayly.github.io/CEMPRA_documentation/05_data_inputs.html)
 
 ## Code of Conduct
 

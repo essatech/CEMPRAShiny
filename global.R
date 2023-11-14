@@ -9,6 +9,7 @@
 rm(list = ls())
 
 # Load necessary libraries
+# devtools::install_github("essatech/CEMPRA")
 library(CEMPRA) # Download instructions: https://github.com/essatech/CEMPRA/
 library(dplyr)
 library(readxl)

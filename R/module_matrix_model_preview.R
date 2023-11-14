@@ -85,6 +85,12 @@ module_matrix_model_preview_server <- function(id) {
                    # Only consider stressors applicable to Population model
                    ms_stress <- ms_stress[which(ms_stress$Model %in% c("Population Model", "All")), ]
                    
+                   # If there are no population-only specific stressors then return
+                   # an empty UI
+                   if(nrow(ms_stress) == 0) {
+                     return()
+                   }
+                   
                    ms_stress_list <- list()
                    
                    # All variables off by default

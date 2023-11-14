@@ -145,7 +145,7 @@ module_main_map_server <- function(id) {
 
         # HUC spatial geometry
         huc_geom <- session$userData$rv_HUC_geom$huc_geom
-
+        
         # Get values from magnitude table if normal variable
         if (var_name != "system_capacity") {
 
@@ -189,7 +189,8 @@ module_main_map_server <- function(id) {
               x = resp_curv$value,
               y = resp_curv$mean_system_capacity,
               xout = huc_geom$values,
-              yleft = 0, yright = 100
+              rule = 2 # MJB change: points outside of range assume closest
+              # yleft = 0, yright = 100
             )
             huc_geom$values_sc <- interp$y
           }
@@ -206,7 +207,7 @@ module_main_map_server <- function(id) {
           huc_geom$values_sc <- df_vals$values_sc[match(huc_geom$HUC_ID, df_vals$HUC)]
           huc_geom$values_sc <- huc_geom$values_sc * 100
         }
-
+        
         # Apply color ramp function
         huc_geom$color_vec <- color_func(huc_geom$values_sc)
 

@@ -51,29 +51,29 @@ module_matrix_model_inputs_ui <- function(id) {
       ),
     ),
     
-    
-    fluidRow(
-      column(
-        width = 3,
-        numericInput(ns("surv_5"), label = "surv_5 (Stage 5 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_5")]),
-        
-      ),
-      column(
-        width = 3,
-        numericInput(ns("surv_6"), label = "surv_6 (Stage 6 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_6")]),
-        
-      ),
-      column(
-        width = 3,
-        numericInput(ns("surv_7"), label = "surv_7 (Stage 7 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_7")]),
-        
-      ),
-      column(
-        width = 3,
-        numericInput(ns("surv_8"), label = "surv_8 (Stage 8 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_8")]),
-        
-      ),
-    ),
+    # 
+    # fluidRow(
+    #   column(
+    #     width = 3,
+    #     numericInput(ns("surv_5"), label = "surv_5 (Stage 5 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_5")]),
+    #     
+    #   ),
+    #   column(
+    #     width = 3,
+    #     numericInput(ns("surv_6"), label = "surv_6 (Stage 6 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_6")]),
+    #     
+    #   ),
+    #   column(
+    #     width = 3,
+    #     numericInput(ns("surv_7"), label = "surv_7 (Stage 7 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_7")]),
+    #     
+    #   ),
+    #   column(
+    #     width = 3,
+    #     numericInput(ns("surv_8"), label = "surv_8 (Stage 8 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_8")]),
+    #     
+    #   ),
+    # ),
     
     
     

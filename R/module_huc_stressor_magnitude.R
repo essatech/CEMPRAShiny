@@ -199,6 +199,11 @@ module_huc_stressor_magnitude_server <- function(id) {
                      # Get the stressor magnitude
                      dr <- session$userData$rv_stressor_magnitude$sm_dat
                      dr <- dr[which(dr$HUC_ID %in% selected_ids), ]
+                     
+                     if(nrow(dr) == 0) {
+                       return(DT::datatable(data = data.frame()))
+                     }
+                     
                      # Set SD to 0 for mean value
                      dr$SD <- 0
                      

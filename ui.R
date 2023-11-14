@@ -63,11 +63,11 @@ ui <- dashboardPage(
       tabItem("tab_matrix_model",
               module_matrix_model_ui("matrix_model")
       ),
-      tabItem("tab_stressor_sandbox",
-        tags$p("tab_stressor_sandbox")
+      #tabItem("tab_stressor_sandbox",
+      #  tags$p("tab_stressor_sandbox")
               #module_matrix_model_ui("matrix_model")
               # library(shiny); runApp()
-      ),
+      #),
       tabItem("tab_import",
               module_import_ui("import")
       ),
