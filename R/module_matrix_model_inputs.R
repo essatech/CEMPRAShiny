@@ -373,7 +373,7 @@ module_matrix_model_inputs_server <- function(id) {
                    req(session$userData$rv_life_stages$dat)
                    
                    print("updating pop. model inputs...")
-                   
+
                    isolate({
                      session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "k")] <-
                        input$k
