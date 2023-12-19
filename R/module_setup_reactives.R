@@ -2,6 +2,9 @@ module_setup_reactives <- function(session = NA) {
   
   print("Setting up reactive values for user session...")
 
+  # Determine if we are using polygons or lines
+  session$userData$geom_type <- "polygons"
+  
   # Designate stressor magnitude as reactive values
   rv_stressor_magnitude <- reactiveValues(
     sm_dat = sm_wb_dat

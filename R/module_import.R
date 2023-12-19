@@ -426,6 +426,22 @@ module_import_server <- function(id) {
 
             # Initial load
             bbox <- st_bbox(hmdl)
+            
+            # Determine geometry type and set
+            # Determine if running with lines or polygons
+            print("Determine if running with lines or polygons...")
+            geom_type <-
+              st_geometry_type(hmdl)
+            
+            print("Loading leaflet first time...")
+            
+            if (unique(geom_type)[1] %in% c("LINESTRING", "MULTILINESTRING")) {
+              session$userData$geom_type <- "lines"
+            } else {
+              session$userData$geom_type <- "polygons"
+            }
+            
+            
             session$userData$rv_HUC_layer_load$data <- hmdl
             session$userData$rv_HUC_layer_load$xmin <- bbox$xmin
             session$userData$rv_HUC_layer_load$ymin <- bbox$ymin

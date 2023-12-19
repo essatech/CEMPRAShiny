@@ -261,7 +261,17 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
                   ),
                   actionButton(ns("close_sr_modal"), "Close stressor-response module", style = "margin: 15px;")
                 )
-              )
+              ),
+              
+              fluidRow(
+                shinydashboard::box(
+                  width = 12,
+                  tags$p("Distribution of values"),
+                  plotOutput(
+                    ns("hist_vals_plot")
+                  ),
+                ))
+              
             ),
             easyClose = TRUE,
             size = "l",
@@ -323,6 +333,36 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
       # Create a proxy for the above table
       dt_proxy <- DT::dataTableProxy("main_map-Foot_flow-stressor_response_dt")
+      
+      
+      #-------------------------------------------------------
+      # Summary histogram of values
+      #-------------------------------------------------------
+      output$hist_vals_plot <- renderPlot({
+        
+        # Do not run on app load
+        req(session$userData$rv_stressor_response$active_layer)
+        
+        print("Generating barplot...")
+        
+        # Get all SR data - and keep updating the plot as values are moved
+        sr_data <- session$userData$rv_stressor_response$sr_dat
+        # Filter for target layer
+        this_var <- session$userData$rv_stressor_response$active_layer # e.g., temperature
+        table_vals <- sr_data[[this_var]] # e.g., temperature
+        
+        # Get all stressor values
+        # head(session$userData$rv_stressor_magnitude$sm_dat)
+        
+        sm_dat <- isolate(session$userData$rv_stressor_magnitude$sm_dat)
+        sm_dat <- sm_dat[which(sm_dat$Stressor == this_var), ]
+        
+        hist(sm_dat$Mean, main = NA, xlab = this_var)
+        for(ll in 1:length(table_vals$value)) {
+          abline(v = table_vals$value[ll], col = "grey", lty = 2)
+        }
+        
+      })
 
 
       #-------------------------------------------------------
@@ -461,6 +501,9 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
           dySeries(c("lwr_sd", "mean_system_capacity", "upr_sd"), label = "Mean Sys. Cap.", color = "red")
         
       })
+      
+      
+      
 
 
 
