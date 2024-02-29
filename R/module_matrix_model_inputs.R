@@ -13,10 +13,42 @@ module_matrix_model_inputs_ui <- function(id) {
   ns <- NS(id)
   
   tagList(
-    class = "popmode_input",
+    tags$h4("Load Data From Existing Life Cycles Profile"),
+    
+    
+    fluidRow(
+      column(
+        width = 8,
+        fileInput(
+          ns("up_vital2"),
+          label = "life cycles.csv",
+          multiple = FALSE,
+          accept = c(".csv")
+        )
+      ),
+      
+      column(
+        width = 4,
+        numericInput(ns("Nstage"), label = "Nstage (# Stages)", value = life_stages$Value[which(life_stages$Name == "Nstage")]),
+      )
+    ),
+    
+    div(style = "color: #ffffff; background: #ff000059; border-radius: 5px; margin: 5px;",
+        textOutput(ns(
+          "upload_error_msg_vitals"
+        ))),
+    
+    
+    
+    
+    # class = "popmode_input",
+    
     tags$h4("Survival Parameters"),
     
-    tags$p("Define the individual survivorship probabilities for each stage class evaluated on annual time steps in the simulation.", class = "pm-ht"),
+    tags$p(
+      "Define the individual survivorship probabilities for each stage class evaluated on annual time steps in the simulation.",
+      class = "pm-ht"
+    ),
     
     fluidRow(
       column(
@@ -51,33 +83,77 @@ module_matrix_model_inputs_ui <- function(id) {
       ),
     ),
     
-    # 
+    
+    
+    
+    
+    fluidRow(
+      column(
+        width = 4,
+        numericInput(ns("surv_5"), label = "surv_5 (Stage 5 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_5")]),
+        
+      ),
+      column(
+        width = 4,
+        numericInput(ns("surv_6"), label = "surv_6 (Stage 6 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_6")]),
+        
+      ),
+      column(
+        width = 4,
+        numericInput(ns("surv_7"), label = "surv_7 (Stage 7 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_7")]),
+        
+      ),
+    ),
+    
+    fluidRow(
+      column(
+        width = 4,
+        numericInput(ns("surv_8"), label = "surv_8 (Stage 8 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_8")]),
+        
+      ),
+      column(
+        width = 4,
+        numericInput(ns("surv_9"), label = "surv_9 (Stage 9 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_9")]),
+        
+      ),
+      column(
+        width = 4,
+        numericInput(ns("surv_10"), label = "surv_10 (Stage 10 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_10")]),
+        
+      )
+      
+    ),
+    
+    #
     # fluidRow(
     #   column(
     #     width = 3,
     #     numericInput(ns("surv_5"), label = "surv_5 (Stage 5 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_5")]),
-    #     
+    #
     #   ),
     #   column(
     #     width = 3,
     #     numericInput(ns("surv_6"), label = "surv_6 (Stage 6 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_6")]),
-    #     
+    #
     #   ),
     #   column(
     #     width = 3,
     #     numericInput(ns("surv_7"), label = "surv_7 (Stage 7 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_7")]),
-    #     
+    #
     #   ),
     #   column(
     #     width = 3,
     #     numericInput(ns("surv_8"), label = "surv_8 (Stage 8 Survival)", value = life_stages$Value[which(life_stages$Name == "surv_8")]),
-    #     
+    #
     #   ),
     # ),
     
     
     
-    tags$p("Interannual stochasticity is introduced into the model. Mortality also correlates intra-annually among size classes and over time (correlation diminishes as distance between stages increases).", class = "pm-ht"),
+    tags$p(
+      "Interannual stochasticity is introduced into the model. Mortality also correlates intra-annually among size classes and over time (correlation diminishes as distance between stages increases).",
+      class = "pm-ht"
+    ),
     
     fluidRow(
       column(
@@ -96,7 +172,10 @@ module_matrix_model_inputs_ui <- function(id) {
     
     tags$h4("Growth Parameters"),
     
-    tags$p("Growth is represented as time (years) spent in each stage. This circumvents defining size attributes for each stage and allows for more flexibility to parameterize different species in the model.", class = "pm-ht"),
+    tags$p(
+      "Growth is represented as time (years) spent in each stage. This circumvents defining size attributes for each stage and allows for more flexibility to parameterize different species in the model.",
+      class = "pm-ht"
+    ),
     
     fluidRow(
       column(
@@ -117,12 +196,47 @@ module_matrix_model_inputs_ui <- function(id) {
       ),
     ),
     
+    fluidRow(
+      column(
+        width = 3,
+        numericInput(ns("year_5"), label = "year_5 (Years as Stage 5)", value = life_stages$Value[which(life_stages$Name == "year_5")]),
+      ),
+      column(
+        width = 3,
+        numericInput(ns("year_6"), label = "year_6 (Years as Stage 6)", value = life_stages$Value[which(life_stages$Name == "year_6")]),
+      ),
+      column(
+        width = 3,
+        numericInput(ns("year_7"), label = "year_7 (Years as Stage 7)", value = life_stages$Value[which(life_stages$Name == "year_7")]),
+      ),
+      column(
+        width = 3,
+        numericInput(ns("year_8"), label = "year_8 (Years as Stage 8)", value = life_stages$Value[which(life_stages$Name == "year_8")]),
+      ),
+    ),
+    
+    fluidRow(
+      column(
+        width = 3,
+        numericInput(ns("year_9"), label = "year_9 (Years as Stage 9)", value = life_stages$Value[which(life_stages$Name == "year_9")]),
+      ),
+      column(
+        width = 3,
+        numericInput(ns("year_10"), label = "year_10 (Years as Stage 10)", value = life_stages$Value[which(life_stages$Name == "year_10")]),
+      )
+    ),
+    
+    
+    
     tags$hr(),
     
     
     tags$h4("Reproduction Parameters"),
     
-    tags$p("The primary reproduction parameters include the spawning events per female (within a year), eggs per female spawner and variance in eggs per female.", class = "pm-ht"),
+    tags$p(
+      "The primary reproduction parameters include the spawning events per female (within a year), eggs per female spawner and variance in eggs per female.",
+      class = "pm-ht"
+    ),
     
     fluidRow(
       column(
@@ -136,11 +250,13 @@ module_matrix_model_inputs_ui <- function(id) {
       column(
         width = 4,
         numericInput(ns("eps_sd"), label = "eps_sd (Variance in Eggs per Female)", value = life_stages$Value[which(life_stages$Name == "eps_sd")]),
-      ),
-      
+      )
     ),
     
-    tags$p("The correlation in egg fecundity through time determines the similarity in residual egg production across age classes through years. (TODO add description for spawning interval).", class = "pm-ht"),
+    tags$p(
+      "The correlation in egg fecundity through time determines the similarity in residual egg production across age classes through years. (TODO add description for spawning interval).",
+      class = "pm-ht"
+    ),
     
     fluidRow(
       column(
@@ -153,7 +269,10 @@ module_matrix_model_inputs_ui <- function(id) {
       )
     ),
     
-    tags$p("The probability (portion) that an individual is sexually mature in each stage class.", class = "pm-ht"),
+    tags$p(
+      "The probability (portion) that an individual is sexually mature in each stage class.",
+      class = "pm-ht"
+    ),
     
     fluidRow(
       column(
@@ -174,12 +293,49 @@ module_matrix_model_inputs_ui <- function(id) {
       )
     ),
     
+    
+    fluidRow(
+      column(
+        width = 3,
+        numericInput(ns("mat_5"), label = "mat_5 (Maturity as Stage 5)", value = life_stages$Value[which(life_stages$Name == "mat_5")]),
+      ),
+      column(
+        width = 3,
+        numericInput(ns("mat_6"), label = "mat_6 (Maturity as Stage 6)", value = life_stages$Value[which(life_stages$Name == "mat_6")]),
+      ),
+      column(
+        width = 3,
+        numericInput(ns("mat_7"), label = "mat_7 (Maturity as Stage 7)", value = life_stages$Value[which(life_stages$Name == "mat_7")]),
+      ),
+      column(
+        width = 3,
+        numericInput(ns("mat_8"), label = "mat_8 (Maturity as Stage 8)", value = life_stages$Value[which(life_stages$Name == "mat_8")]),
+      )
+    ),
+    
+    
+    fluidRow(
+      column(
+        width = 3,
+        numericInput(ns("mat_9"), label = "mat_9 (Maturity as Stage 9)", value = life_stages$Value[which(life_stages$Name == "mat_9")]),
+      ),
+      column(
+        width = 3,
+        numericInput(ns("mat_10"), label = "mat_10 (Maturity as Stage 10)", value = life_stages$Value[which(life_stages$Name == "mat_10")]),
+      )
+    ),
+    
+    
+    
     tags$hr(),
     
     
     tags$h4("Density Dependence"),
     
-    tags$p("The adult carrying capacity will determine the mean number of adults during the simulation. The abudnacne of adults in the population will generally hover around this value with stochasticity after the population stabilizes. The abundance estimates for other life stages are essentially back-calculated in each year of the simulation such that the adult carrying capacity is achieved with a global lambda value equal to 1.", class = "pm-ht"),
+    tags$p(
+      "The adult carrying capacity will determine the mean number of adults during the simulation. The abudnacne of adults in the population will generally hover around this value with stochasticity after the population stabilizes. The abundance estimates for other life stages are essentially back-calculated in each year of the simulation such that the adult carrying capacity is achieved with a global lambda value equal to 1.",
+      class = "pm-ht"
+    ),
     
     
     fluidRow(column(
@@ -191,7 +347,10 @@ module_matrix_model_inputs_ui <- function(id) {
     
     tags$h4("Compensation Ratios"),
     
-    tags$p("Compensation ratios for density dependent growth. Density dependence is introduced into the model as compensatory density dependence with a fixed adult carrying capacity and the assumption of population stability over a longterm horizon.", class = "pm-ht"),
+    tags$p(
+      "Compensation ratios for density dependent growth. Density dependence is introduced into the model as compensatory density dependence with a fixed adult carrying capacity and the assumption of population stability over a longterm horizon.",
+      class = "pm-ht"
+    ),
     
     
     fluidRow(
@@ -224,9 +383,41 @@ module_matrix_model_inputs_ui <- function(id) {
       column(
         width = 4,
         numericInput(ns("cr_4"), label = "cr_4 (Stage 4 Survival CR)", value = life_stages$Value[which(life_stages$Name == "cr_4")]),
-      ),
-      
+      )
     ),
+    
+    
+    fluidRow(
+      column(
+        width = 4,
+        numericInput(ns("cr_5"), label = "cr_5 (Stage 5 Survival CR)", value = life_stages$Value[which(life_stages$Name == "cr_5")]),
+      ),
+      column(
+        width = 4,
+        numericInput(ns("cr_6"), label = "cr_6 (Stage 6 Survival CR)", value = life_stages$Value[which(life_stages$Name == "cr_6")]),
+      ),
+      column(
+        width = 4,
+        numericInput(ns("cr_7"), label = "cr_7 (Stage 7 Survival CR)", value = life_stages$Value[which(life_stages$Name == "cr_7")]),
+      ),
+    ),
+    
+    
+    fluidRow(
+      column(
+        width = 4,
+        numericInput(ns("cr_8"), label = "cr_8 (Stage 8 Survival CR)", value = life_stages$Value[which(life_stages$Name == "cr_8")]),
+      ),
+      column(
+        width = 4,
+        numericInput(ns("cr_9"), label = "cr_9 (Stage 9 Survival CR)", value = life_stages$Value[which(life_stages$Name == "cr_9")]),
+      ),
+      column(
+        width = 4,
+        numericInput(ns("cr_10"), label = "cr_10 (Stage 10 Survival CR)", value = life_stages$Value[which(life_stages$Name == "cr_10")]),
+      )
+    ),
+    
     
     
     tags$hr(),
@@ -252,19 +443,18 @@ module_matrix_model_inputs_ui <- function(id) {
 module_matrix_model_inputs_server <- function(id) {
   moduleServer(id,
                function(input, output, session) {
-                 
                  ns <- session$ns
-                 
                  
                  # Add form validators (front-end only)
                  btwn_01 <- function(value) {
-                   if(is.null(value)) {
+                   if (is.null(value)) {
                      return("Cannot be blank")
                    }
-                   if(is.na(value)) {
+                   if (is.na(value)) {
                      return("Cannot be blank")
                    }
-                   if(class(value) != "numeric" & class(value) != "integer") {
+                   if (class(value) != "numeric" &
+                       class(value) != "integer") {
                      return("Must be a number")
                    }
                    if (value > 1) {
@@ -274,25 +464,49 @@ module_matrix_model_inputs_server <- function(id) {
                      return("Value must be between 0 and 1")
                    }
                  }
+                 
+                 # Add form validators (front-end only)
+                 btwn_1_and_10 <- function(value) {
+                   if (is.null(value)) {
+                     return("Cannot be blank")
+                   }
+                   if (is.na(value)) {
+                     return("Cannot be blank")
+                   }
+                   if (class(value) != "numeric" &
+                       class(value) != "integer") {
+                     return("Must be a number")
+                   }
+                   if (value > 10) {
+                     return("Value must be between 1 and 10")
+                   }
+                   if (value < 1) {
+                     return("Value must be between 1 and 10")
+                   }
+                 }
+                 
                  simp_num <- function(value) {
-                   if(is.null(value)) {
+                   if (is.null(value)) {
                      return("Cannot be blank")
                    }
-                   if(is.na(value)) {
+                   if (is.na(value)) {
                      return("Cannot be blank")
                    }
-                   if(class(value) != "numeric" & class(value) != "integer") {
+                   if (class(value) != "numeric" &
+                       class(value) != "integer") {
                      return("Must be a number")
                    }
                  }
+                 
                  gtr_0 <- function(value) {
-                   if(is.null(value)) {
+                   if (is.null(value)) {
                      return("Cannot be blank")
                    }
-                   if(is.na(value)) {
+                   if (is.na(value)) {
                      return("Cannot be blank")
                    }
-                   if(class(value) != "numeric" & class(value) != "integer") {
+                   if (class(value) != "numeric" &
+                       class(value) != "integer") {
                      return("Must be a number")
                    }
                    if (value <= 0) {
@@ -303,6 +517,7 @@ module_matrix_model_inputs_server <- function(id) {
                  
                  
                  iv <- InputValidator$new()
+                 iv$add_rule("Nstage", btwn_1_and_10)
                  iv$add_rule("k", simp_num)
                  iv$add_rule("events", simp_num)
                  iv$add_rule("eps", simp_num)
@@ -311,36 +526,675 @@ module_matrix_model_inputs_server <- function(id) {
                  iv$add_rule("S0", btwn_01)
                  iv$add_rule("SR", btwn_01)
                  iv$add_rule("surv_1", btwn_01)
-                 iv$add_rule("surv_2", btwn_01)
-                 iv$add_rule("surv_3", btwn_01)
-                 iv$add_rule("surv_4", btwn_01)
+                 #iv$add_rule("surv_2", btwn_01)
+                 #iv$add_rule("surv_3", btwn_01)
+                 #iv$add_rule("surv_4", btwn_01)
                  iv$add_rule("year_1", gtr_0)
-                 iv$add_rule("year_2", gtr_0)
-                 iv$add_rule("year_3", gtr_0)
-                 iv$add_rule("year_4", gtr_0)
+                 #iv$add_rule("year_2", gtr_0)
+                 #iv$add_rule("year_3", gtr_0)
+                 #iv$add_rule("year_4", gtr_0)
                  iv$add_rule("cr_E", simp_num)
                  iv$add_rule("cr_0", simp_num)
                  iv$add_rule("cr_1", simp_num)
-                 iv$add_rule("cr_2", simp_num)
-                 iv$add_rule("cr_3", simp_num)
-                 iv$add_rule("cr_4", simp_num)
+                 #iv$add_rule("cr_2", simp_num)
+                 #iv$add_rule("cr_3", simp_num)
+                 #iv$add_rule("cr_4", simp_num)
                  iv$add_rule("mat_1", btwn_01)
-                 iv$add_rule("mat_2", btwn_01)
-                 iv$add_rule("mat_3", btwn_01)
-                 iv$add_rule("mat_4", btwn_01)
+                 #iv$add_rule("mat_2", btwn_01)
+                 #iv$add_rule("mat_3", btwn_01)
+                 #iv$add_rule("mat_4", btwn_01)
                  iv$add_rule("eps_sd", simp_num)
                  iv$add_rule("egg_rho", simp_num)
                  iv$add_rule("M.cv", simp_num)
                  iv$add_rule("M.rho", simp_num)
                  iv$enable()
                  
-
+                 
+                 #--------------------------------------
+                 # Upload vital rates from csv
+                 #--------------------------------------
+                 observe({
+                   # Require the file
+                   req(input$up_vital2)
+                   
+                   upload_ok <- FALSE
+                   
+                   # Run import function in a try catch
+                   # to avoid app crashing on upload errors
+                   
+                   print("import life cycles csv...")
+                   
+                   tryCatch({
+                     in_file <- input$up_vital2
+                     
+                     if (is.null(in_file)) {
+                       return(NULL)
+                     }
+                     
+                     # Load in the default watersheds geojson layer
+                     life_stages <-
+                       read.csv(input$up_vital2$datapath)
+                     
+                     # print("running JavaScript... updateAllInputs")
+                     # Update all numeric inputs through javascript
+                     # js$updateAllInputs(rjson::toJSON(life_stages))
+                     
+                     # Update via the UI
+                     isolate({
+                       # Update data object in isolate...
+                       # but trigger events through updateNumericInput()
+                       # (below)
+                       session$userData$rv_life_stages$dat <-
+                         life_stages
+                     })
+                     
+                     
+                     session$userData$rv_eigen_analysis$dat <-
+                       list()
+                     
+                     session$userData$rv_ea_errors$possible_error_state <-
+                       FALSE
+                     
+                     session$userData$rv_ea_errors$possible_error_msg <-
+                       ""
+                     
+                     # session$userData$rv_show_sample_plot$open <- FALSE
+                     
+                     session$userData$rv_pop_sample_plot_data$dat <-
+                       list()
+                     session$userData$rv_pop_sample_plot_data$run_counter <-
+                       1
+                     
+                     # Sand box stressor values
+                     session$userData$rv_sandbox_stressors$dat <-
+                       list()
+                     session$userData$rv_pop_data_huc_ts$dat <-
+                       list()
+                     session$userData$rv_pop_data_huc_ts$run_counter <-
+                       1
+                     session$userData$rv_pop_data_huc_ts$update_ts_plots <-
+                       FALSE
+                     
+                     session$userData$rv_show_pop_main_plot$open <-
+                       FALSE
+                     
+                     # Numer of stage uploaded in csv
+                     n_stage <-
+                       life_stages$Value[life_stages$Name == "Nstage"]
+                     
+                     if (n_stage < 1 | n_stage > 10) {
+                       output$upload_error_msg_sheds <-
+                         renderText({
+                           "Number of stages (Nstage) must be between 1 and 10"
+                         })
+                     } else {
+                       output$upload_error_msg_sheds <-
+                         renderText({
+                           ""
+                         })
+                     }
+                     
+                     
+                     # Upload all numeric input values on page
+                     
+                     updateNumericInput(session, "Nstage", value = life_stages$Value[life_stages$Name == "Nstage"])
+                     updateNumericInput(session, "k", value = life_stages$Value[life_stages$Name == "k"])
+                     updateNumericInput(session, "events", value = life_stages$Value[life_stages$Name == "events"])
+                     updateNumericInput(session, "eps", value = life_stages$Value[life_stages$Name == "eps"])
+                     updateNumericInput(session, "int", value = life_stages$Value[life_stages$Name == "int"])
+                     updateNumericInput(session, "SE", value = life_stages$Value[life_stages$Name == "SE"])
+                     updateNumericInput(session, "S0", value = life_stages$Value[life_stages$Name == "S0"])
+                     updateNumericInput(session, "SR", value = life_stages$Value[life_stages$Name == "SR"])
+                     updateNumericInput(session, "eps_sd", value = life_stages$Value[life_stages$Name == "eps_sd"])
+                     updateNumericInput(session, "egg_rho", value = life_stages$Value[life_stages$Name == "egg_rho"])
+                     updateNumericInput(session, "M.cv", value = life_stages$Value[life_stages$Name == "M.cv"])
+                     updateNumericInput(session, "M.rho", value = life_stages$Value[life_stages$Name == "M.rho"])
+                     
+                     
+                     updateNumericInput(session, "cr_E", value = life_stages$Value[life_stages$Name == "cr_E"])
+                     updateNumericInput(session, "cr_0", value = life_stages$Value[life_stages$Name == "cr_0"])
+                     
+                     updateNumericInput(session, "surv_1", value = life_stages$Value[life_stages$Name == "surv_1"])
+                     updateNumericInput(session, "surv_2", value = life_stages$Value[life_stages$Name == "surv_2"])
+                     updateNumericInput(session, "surv_3", value = life_stages$Value[life_stages$Name == "surv_3"])
+                     updateNumericInput(session, "surv_4", value = life_stages$Value[life_stages$Name == "surv_4"])
+                     updateNumericInput(session, "surv_5", value = life_stages$Value[life_stages$Name == "surv_5"])
+                     updateNumericInput(session, "surv_6", value = life_stages$Value[life_stages$Name == "surv_6"])
+                     updateNumericInput(session, "surv_7", value = life_stages$Value[life_stages$Name == "surv_7"])
+                     updateNumericInput(session, "surv_8", value = life_stages$Value[life_stages$Name == "surv_8"])
+                     updateNumericInput(session, "surv_9", value = life_stages$Value[life_stages$Name == "surv_9"])
+                     updateNumericInput(session, "surv_10", value = life_stages$Value[life_stages$Name == "surv_10"])
+                     
+                     updateNumericInput(session, "year_1", value = life_stages$Value[life_stages$Name == "year_1"])
+                     updateNumericInput(session, "year_2", value = life_stages$Value[life_stages$Name == "year_2"])
+                     updateNumericInput(session, "year_3", value = life_stages$Value[life_stages$Name == "year_3"])
+                     updateNumericInput(session, "year_4", value = life_stages$Value[life_stages$Name == "year_4"])
+                     updateNumericInput(session, "year_5", value = life_stages$Value[life_stages$Name == "year_5"])
+                     updateNumericInput(session, "year_6", value = life_stages$Value[life_stages$Name == "year_6"])
+                     updateNumericInput(session, "year_7", value = life_stages$Value[life_stages$Name == "year_7"])
+                     updateNumericInput(session, "year_8", value = life_stages$Value[life_stages$Name == "year_8"])
+                     updateNumericInput(session, "year_9", value = life_stages$Value[life_stages$Name == "year_9"])
+                     updateNumericInput(session, "year_10", value = life_stages$Value[life_stages$Name == "year_10"])
+                     
+                     updateNumericInput(session, "cr_1", value = life_stages$Value[life_stages$Name == "cr_1"])
+                     updateNumericInput(session, "cr_2", value = life_stages$Value[life_stages$Name == "cr_2"])
+                     updateNumericInput(session, "cr_3", value = life_stages$Value[life_stages$Name == "cr_3"])
+                     updateNumericInput(session, "cr_4", value = life_stages$Value[life_stages$Name == "cr_4"])
+                     updateNumericInput(session, "cr_5", value = life_stages$Value[life_stages$Name == "cr_5"])
+                     updateNumericInput(session, "cr_6", value = life_stages$Value[life_stages$Name == "cr_6"])
+                     updateNumericInput(session, "cr_7", value = life_stages$Value[life_stages$Name == "cr_7"])
+                     updateNumericInput(session, "cr_8", value = life_stages$Value[life_stages$Name == "cr_8"])
+                     updateNumericInput(session, "cr_9", value = life_stages$Value[life_stages$Name == "cr_9"])
+                     updateNumericInput(session, "cr_10", value = life_stages$Value[life_stages$Name == "cr_10"])
+                     
+                     updateNumericInput(session, "mat_1", value = life_stages$Value[life_stages$Name == "mat_1"])
+                     updateNumericInput(session, "mat_2", value = life_stages$Value[life_stages$Name == "mat_2"])
+                     updateNumericInput(session, "mat_3", value = life_stages$Value[life_stages$Name == "mat_3"])
+                     updateNumericInput(session, "mat_4", value = life_stages$Value[life_stages$Name == "mat_4"])
+                     updateNumericInput(session, "mat_5", value = life_stages$Value[life_stages$Name == "mat_5"])
+                     updateNumericInput(session, "mat_6", value = life_stages$Value[life_stages$Name == "mat_6"])
+                     updateNumericInput(session, "mat_7", value = life_stages$Value[life_stages$Name == "mat_7"])
+                     updateNumericInput(session, "mat_8", value = life_stages$Value[life_stages$Name == "mat_8"])
+                     updateNumericInput(session, "mat_9", value = life_stages$Value[life_stages$Name == "mat_9"])
+                     updateNumericInput(session, "mat_10", value = life_stages$Value[life_stages$Name == "mat_10"])
+                     
+                     # isolate({
+                     # })
+                     
+                     
+                   },
+                   error = function(e) {
+                     print("Upload error...")
+                     
+                     output$upload_error_msg_vitals <-
+                       renderText({
+                         "Upload Error: Vital rate parameters did not import correctly. Please check file against the reference and reupload."
+                       })
+                   })
+                 }) # end vital rate import
+                 
+                 
+                 # Add observe event to listen to Nstage input
+                 # and hide additional input boxes depending on the value
+                 # Make additional boxes disappear
+                 observeEvent(input$Nstage, {
+                   
+                   n_stage <- as.numeric(input$Nstage)
+                   
+                   if (n_stage < 10) {
+                     addClass(id = "matrix_model-mm_inputs-surv_10-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-surv_10",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_10-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_10",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_10-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_10",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_10-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_10",
+                              class = "hide-this",
+                              asis = TRUE)
+                   } else {
+                     removeClass(id = "matrix_model-mm_inputs-surv_10-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-surv_10",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_10-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_10",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_10-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_10",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_10-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_10",
+                              class = "hide-this",
+                              asis = TRUE)
+                   }
+                   if (n_stage < 9) {
+                     addClass(id = "matrix_model-mm_inputs-surv_9-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-surv_9",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_9-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_9",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_9-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_9",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_9-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_9",
+                              class = "hide-this",
+                              asis = TRUE)
+                   } else {
+                     removeClass(id = "matrix_model-mm_inputs-surv_9-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-surv_9",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_9-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_9",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_9-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_9",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_9-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_9",
+                              class = "hide-this",
+                              asis = TRUE)
+                   }
+                   if (n_stage < 8) {
+                     addClass(id = "matrix_model-mm_inputs-surv_8-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-surv_8",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_8-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_8",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_8-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_8",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_8-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_8",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     
+                   } else {
+                     removeClass(id = "matrix_model-mm_inputs-surv_8-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-surv_8",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_8-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_8",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_8-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_8",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_8-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_8",
+                              class = "hide-this",
+                              asis = TRUE)
+                   }
+                   if (n_stage < 7) {
+                     addClass(id = "matrix_model-mm_inputs-surv_7-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-surv_7",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_7-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_7",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_7-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_7",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_7-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_7",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                   } else {
+                     removeClass(id = "matrix_model-mm_inputs-surv_7-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-surv_7",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_7-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_7",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_7-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_7",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_7-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_7",
+                              class = "hide-this",
+                              asis = TRUE)
+                   }
+                   if (n_stage < 6) {
+                     addClass(id = "matrix_model-mm_inputs-surv_6-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-surv_6",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_6-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_6",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_6-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_6",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_6-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_6",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                   } else {
+                     removeClass(id = "matrix_model-mm_inputs-surv_6-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-surv_6",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_6-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_6",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_6-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_6",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_6-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_6",
+                              class = "hide-this",
+                              asis = TRUE)
+                   }
+                   if (n_stage < 5) {
+                     addClass(id = "matrix_model-mm_inputs-surv_5-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-surv_5",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_5-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_5",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_5-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_5",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_5-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_5",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                   } else {
+                     removeClass(id = "matrix_model-mm_inputs-surv_5-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-surv_5",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_5-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_5",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_5-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_5",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_5-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_5",
+                              class = "hide-this",
+                              asis = TRUE)
+                   }
+                   if (n_stage < 4) {
+                     addClass(id = "matrix_model-mm_inputs-surv_4-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-surv_4",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_4-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_4",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_4-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_4",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_4-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_4",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                   } else {
+                     removeClass(id = "matrix_model-mm_inputs-surv_4-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-surv_4",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_4-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_4",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_4-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_4",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_4-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_4",
+                              class = "hide-this",
+                              asis = TRUE)
+                   }
+                   if (n_stage < 3) {
+                     addClass(id = "matrix_model-mm_inputs-surv_3-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-surv_3",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_3-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_3",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_3-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_3",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_3-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_3",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                   } else {
+                     removeClass(id = "matrix_model-mm_inputs-surv_3-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-surv_3",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_3-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_3",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_3-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_3",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_3-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_3",
+                              class = "hide-this",
+                              asis = TRUE)
+                   }
+                   if (n_stage < 2) {
+                     addClass(id = "matrix_model-mm_inputs-surv_2-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-surv_2",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_2-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-year_2",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_2-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-cr_2",
+                              class = "hide-this",
+                              asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_2-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     addClass(id = "matrix_model-mm_inputs-mat_2",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                   } else {
+                     removeClass(id = "matrix_model-mm_inputs-surv_2-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-surv_2",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_2-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-year_2",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_2-label",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-cr_2",
+                                 class = "hide-this",
+                                 asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_2-label",
+                              class = "hide-this",
+                              asis = TRUE)
+                     removeClass(id = "matrix_model-mm_inputs-mat_2",
+                              class = "hide-this",
+                              asis = TRUE)
+                   }
+                 })
+                 
+                 
+                 
                  
                  # Listen for any changes to matrix model input parameters
                  #  and on change update the reactive values object
-                 # session$userData$rv_life_stages$dat
+                 #  session$userData$rv_life_stages$dat
                  observe({
+                   
+                   print("passive values update...")
+                   
                    # Do not run if any input is null (update while typing...)
+                   req(input$Nstage >= 1 & input$Nstage <= 10)
                    req(input$k >= 0)
                    req(input$events >= 0)
                    req(input$eps >= 0)
@@ -349,32 +1203,92 @@ module_matrix_model_inputs_server <- function(id) {
                    req(input$S0 >= 0 & input$S0 <= 1)
                    req(input$SR >= 0 & input$SR <= 1)
                    req(input$surv_1 >= 0 & input$surv_1 <= 1)
-                   req(input$surv_2 >= 0 & input$surv_2 <= 1)
-                   req(input$surv_3 >= 0 & input$surv_3 <= 1)
-                   req(input$surv_4 >= 0 & input$surv_4 <= 1)
+                   #req(input$surv_2 >= 0 & input$surv_2 <= 1)
+                   #req(input$surv_3 >= 0 & input$surv_3 <= 1)
+                   #req(input$surv_4 >= 0 & input$surv_4 <= 1)
                    req(input$year_1 > 0)
-                   req(input$year_2 > 0)
-                   req(input$year_3 > 0)
-                   req(input$year_4 > 0)
+                   #req(input$year_2 > 0)
+                   #req(input$year_3 > 0)
+                   #req(input$year_4 > 0)
                    req(input$cr_E >= 0)
                    req(input$cr_0 >= 0)
-                   req(input$cr_1 >= 0)
-                   req(input$cr_2 >= 0)
-                   req(input$cr_3 >= 0)
-                   req(input$cr_4 >= 0)
+                   #req(input$cr_1 >= 0)
+                   #req(input$cr_2 >= 0)
+                   #req(input$cr_3 >= 0)
+                   #req(input$cr_4 >= 0)
                    req(input$mat_1 >= 0 & input$mat_1 <= 1)
-                   req(input$mat_2 >= 0 & input$mat_2 <= 1)
-                   req(input$mat_3 >= 0 & input$mat_3 <= 1)
-                   req(input$mat_4 >= 0 & input$mat_4 <= 1)
+                   #req(input$mat_2 >= 0 & input$mat_2 <= 1)
+                   #req(input$mat_3 >= 0 & input$mat_3 <= 1)
+                   #req(input$mat_4 >= 0 & input$mat_4 <= 1)
                    req(input$eps_sd >= 0)
                    req(input$egg_rho >= 0)
                    req(input$M.cv >= 0)
                    req(input$M.rho >= 0)
                    req(session$userData$rv_life_stages$dat)
                    
+                   n_stage <- input$Nstage
+                   
+                   if(n_stage > 9) {
+                     req(input$surv_10 >= 0 & input$surv_10 <= 1)
+                     req(input$mat_10 >= 0 & input$mat_10 <= 1)
+                     req(input$cr_10 >= 0)
+                     req(input$year_10 > 0)
+                   }
+                   if(n_stage > 8) {
+                     req(input$surv_9 >= 0 & input$surv_9 <= 1)
+                     req(input$mat_9 >= 0 & input$mat_9 <= 1)
+                     req(input$cr_9 >= 0)
+                     req(input$year_9 > 0)
+                   }
+                   if(n_stage > 7) {
+                     req(input$surv_8 >= 0 & input$surv_8 <= 1)
+                     req(input$mat_8 >= 0 & input$mat_8 <= 1)
+                     req(input$cr_8 >= 0)
+                     req(input$year_8 > 0)
+                   }
+                   if(n_stage > 6) {
+                     req(input$surv_7 >= 0 & input$surv_7 <= 1)
+                     req(input$mat_7 >= 0 & input$mat_7 <= 1)
+                     req(input$cr_7 >= 0)
+                     req(input$year_7 > 0)
+                   }
+                   if(n_stage > 5) {
+                     req(input$surv_6 >= 0 & input$surv_6 <= 1)
+                     req(input$mat_6 >= 0 & input$mat_6 <= 1)
+                     req(input$cr_6 >= 0)
+                     req(input$year_6 > 0)
+                   }
+                   if(n_stage > 4) {
+                     req(input$surv_5 >= 0 & input$surv_5 <= 1)
+                     req(input$mat_5 >= 0 & input$mat_5 <= 1)
+                     req(input$cr_5 >= 0)
+                     req(input$year_5 > 0)
+                   }
+                   if(n_stage > 3) {
+                     req(input$surv_4 >= 0 & input$surv_4 <= 1)
+                     req(input$mat_4 >= 0 & input$mat_4 <= 1)
+                     req(input$cr_4 >= 0)
+                     req(input$year_4 > 0)
+                   }
+                   if(n_stage > 2) {
+                     req(input$surv_3 >= 0 & input$surv_3 <= 1)
+                     req(input$mat_3 >= 0 & input$mat_3 <= 1)
+                     req(input$cr_3 >= 0)
+                     req(input$year_3 > 0)
+                   }
+                   if(n_stage > 1) {
+                     req(input$surv_2 >= 0 & input$surv_2 <= 1)
+                     req(input$mat_2 >= 0 & input$mat_2 <= 1)
+                     req(input$cr_2 >= 0)
+                     req(input$year_2 > 0)
+                   }
+                   
+                   
                    print("updating pop. model inputs...")
-
+                   
                    isolate({
+                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "Nstage")] <-
+                       input$Nstage
                      session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "k")] <-
                        input$k
                      session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "events")] <-
@@ -391,40 +1305,16 @@ module_matrix_model_inputs_server <- function(id) {
                        input$SR
                      session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_1")] <-
                        input$surv_1
-                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_2")] <-
-                       input$surv_2
-                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_3")] <-
-                       input$surv_3
-                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_4")] <-
-                       input$surv_4
                      session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_1")] <-
                        input$year_1
-                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_2")] <-
-                       input$year_2
-                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_3")] <-
-                       input$year_3
-                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_4")] <-
-                       input$year_4
                      session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_E")] <-
                        input$cr_E
                      session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_0")] <-
                        input$cr_0
                      session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_1")] <-
                        input$cr_1
-                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_2")] <-
-                       input$cr_2
-                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_3")] <-
-                       input$cr_3
-                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_4")] <-
-                       input$cr_4
                      session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_1")] <-
                        input$mat_1
-                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_2")] <-
-                       input$mat_2
-                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_3")] <-
-                       input$mat_3
-                     session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_4")] <-
-                       input$mat_4
                      session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "eps_sd")] <-
                        input$eps_sd
                      session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "egg_rho")] <-
@@ -433,13 +1323,112 @@ module_matrix_model_inputs_server <- function(id) {
                        input$M.cv
                      session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "M.rho")] <-
                        input$M.rho
+                     
+                     if(n_stage >= 2) {
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_2")] <-
+                         input$mat_2
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_2")] <-
+                         input$cr_2
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_2")] <-
+                         input$year_2
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_2")] <-
+                         input$surv_2
+                     }
+                     if(n_stage >= 3) {
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_3")] <-
+                         input$mat_3
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_3")] <-
+                         input$cr_3
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_3")] <-
+                         input$year_3
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_3")] <-
+                         input$surv_3
+                     }
+                     if(n_stage >= 4) {
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_4")] <-
+                         input$mat_4
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_4")] <-
+                         input$cr_4
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_4")] <-
+                         input$year_4
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_4")] <-
+                         input$surv_4
+                     }
+                     if(n_stage >= 5) {
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_5")] <-
+                         input$mat_5
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_5")] <-
+                         input$cr_5
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_5")] <-
+                         input$year_5
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_5")] <-
+                         input$surv_5
+                     }
+                     if(n_stage >= 6) {
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_6")] <-
+                         input$mat_6
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_6")] <-
+                         input$cr_6
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_6")] <-
+                         input$year_6
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_6")] <-
+                         input$surv_6
+                     }
+                     if(n_stage >= 7) {
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_7")] <-
+                         input$mat_7
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_7")] <-
+                         input$cr_7
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_7")] <-
+                         input$year_7
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_7")] <-
+                         input$surv_7
+                     }
+                     if(n_stage >= 8) {
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_8")] <-
+                         input$mat_8
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_8")] <-
+                         input$cr_8
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_8")] <-
+                         input$year_8
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_8")] <-
+                         input$surv_8
+                     }
+                     if(n_stage >= 9) {
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_9")] <-
+                         input$mat_9
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_9")] <-
+                         input$cr_9
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_9")] <-
+                         input$year_9
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_9")] <-
+                         input$surv_9
+                     }
+                     if(n_stage >= 10) {
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "mat_10")] <-
+                         input$mat_10
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "cr_10")] <-
+                         input$cr_10
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "year_10")] <-
+                         input$year_10
+                       session$userData$rv_life_stages$dat$Value[which(session$userData$rv_life_stages$dat$Name == "surv_10")] <-
+                         input$surv_10
+                     }
+                     
+                     
+                     
                    })
+                   
+                   print("End of passive inputs...")
                    
                  })
                  
                  
                  
-
+                 
+                 
+                 
+                 
                  
                  
                })

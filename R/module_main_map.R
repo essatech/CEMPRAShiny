@@ -280,9 +280,9 @@ module_main_map_server <- function(id) {
                  # leafletProxy() to only update the target layer.
                  
                  print("HUC polygon draw...")
-                 # browser()
                  
                  observe({
+                   
                    print("Updating polygons with observer()...")
                    
                    if(isolate(session$userData$geom_type) == "lines") {

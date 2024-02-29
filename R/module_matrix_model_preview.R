@@ -67,6 +67,7 @@ module_matrix_model_preview_ui <- function(id) {
 #' @return None
 #'
 module_matrix_model_preview_server <- function(id) {
+  
   moduleServer(id,
                function(input, output, session) {
                  ns <- session$ns
@@ -300,11 +301,12 @@ module_matrix_model_preview_server <- function(id) {
                  
                  
                  output$samp_adults <- renderPlotly({
-                   print("Plotting adults...")
+                   
+                   print("Plotting stage classes...")
                    
                    # Gather plot type to show: 
                    plot_type <- input$samp_plot_type
-                   # adult; subadult; juv; yoy; lambda; allstage
+                   # stage_classes; lambda; allstage
                    
 
                    # Get the current run
@@ -319,14 +321,20 @@ module_matrix_model_preview_server <- function(id) {
                    # Get data for current run (from above)
                    pdat <- session$userData$rv_pop_sample_plot_data$dat[[crun]]
                    
+                   # Get number of stages
+                   n_stage <- session$userData$rv_life_stages$dat$Value[session$userData$rv_life_stages$dat$Name == "Nstage"]
+                   
+                   
+                   
                    # Which data frame should be sources from the results object
                    # either counts of individuals N or lambdas
-                   if(plot_type == "adult" | plot_type == "subadult" | plot_type == "juv" | plot_type == "yoy" | plot_type == "allstage") {
+                   if(plot_type == "stage_classes" | plot_type == "allstage") {
                      t_var <- "N"
                    }
                    if(plot_type == "lambda") {
                      t_var <- "lambdas"
                    }
+                   
                    
                    # Extract target object from bootstrap replicate runs
                    get_n_obj <- function(obj, name = "") {
@@ -349,15 +357,14 @@ module_matrix_model_preview_server <- function(id) {
                    # If we are plotting allstage generate the plot here
                    # and do not proceed further
                    if(plot_type == "allstage") {
+                     
                      pdata_1$sim <- NULL # Not showing current previous
                      # Reshape and relabel
-
+                     
                      p2 <- reshape2::melt(pdata_1, id = "year")
                      p2$stage <- as.character(p2$variable)
-                     p2$stage <- ifelse(p2$stage == "V1", "Stage 1", p2$stage)
-                     p2$stage <- ifelse(p2$stage == "V2", "Stage 2", p2$stage)
-                     p2$stage <- ifelse(p2$stage == "V3", "Stage 3", p2$stage)
-                     p2$stage <- ifelse(p2$stage == "V4", "Stage 4", p2$stage)
+                     p2$stage <- gsub("V", "Stage ", p2$stage)
+                     
                      # Summarize averages by life stage
                      p3 <- p2 %>% dplyr::group_by(year, stage) %>% summarise(
                        mean = mean(value, na.rm = TRUE),
@@ -377,14 +384,15 @@ module_matrix_model_preview_server <- function(id) {
                        geom_line() +
                        ggtitle("All life stages") +
                        xlab("Simulation Year") + ylab("N")
-                     p <- p + geom_ribbon(data = p3, aes(ymin = lwr, ymax = upr), alpha = 0.1) + theme_bw()
+                     p <- p + theme_bw()
+                     #p <- p + geom_ribbon(data = p3, aes(ymin = lwr, ymax = upr), alpha = 0.1) + theme_bw()
                      return(p)
                    }
                    
                    
-                   # ---------------------------------------------
-                   # Generate plot for all life stages here (& lambda)...
-                   # ---------------------------------------------
+                   # ----------------------------------------------------
+                   # Generate plot for all life stages here (& lambda)  .
+                   # ----------------------------------------------------
                    
                    # Gather values for previous run
                    if(crun > 1) {
@@ -406,25 +414,24 @@ module_matrix_model_preview_server <- function(id) {
                    
                    # Switch to target variable
                    # Set plot titles
-                   if(plot_type == "yoy") {
-                     pdata_1$value <- pdata_1$V1
-                     mtitle <- "YoY/Fry Abundance"
+                   if(plot_type == "stage_classes") {
+                     
+                     selected_stages <- input$samp_stages
+                     pdata_1$value <- 0
+                     
+                     if(length(selected_stages) == 0) {
+                       pdata_1$value <- 0
+                     }
+                     if(length(selected_stages) == 1) {
+                       pdata_1$value <- as.numeric(pdata_1[, selected_stages])
+                     }
+                     if(length(selected_stages) > 1) {
+                       # Need to pool data across stage classes
+                       pdata_1$value <- rowSums(pdata_1[, selected_stages], na.rm = TRUE)
+                     }
+                     mtitle <- "Abundance"
                      y_axe <- "N"
-                   }
-                   if(plot_type == "juv") {
-                     pdata_1$value <- pdata_1$V2
-                     mtitle <- "Juvenile Abundance"
-                     y_axe <- "N"
-                   }
-                   if(plot_type == "subadult") {
-                     pdata_1$value <- pdata_1$V3
-                     mtitle <- "Sub-Adult Abundance"
-                     y_axe <- "N"
-                   }
-                   if(plot_type == "adult") {
-                     pdata_1$value <- pdata_1$V4
-                     mtitle <- "Adult Abundance"
-                     y_axe <- "N"
+                     
                    }
                    if(plot_type == "lambda") {
                      pdata_1$value <- pdata_1$obj
@@ -472,10 +479,36 @@ module_matrix_model_preview_server <- function(id) {
 
                  
                  
+                 
+                 # Hide Check Boxes
+                 observeEvent(input$samp_plot_type, {
+                   if (input$samp_plot_type == "stage_classes") {
+                     # Remove a CSS class to hide
+                     removeClass(id = "matrix_model-mm_preview-samp_stages", class = "hide-this", asis = TRUE)
+                   } else {
+                     # Add a CSS class to hide
+                     addClass(id = "matrix_model-mm_preview-samp_stages", class = "hide-this", asis = TRUE)
+                   }
+                 })
+                 
+                
+                 
                  #-------------------------------------------------------
                  # Open the demo projection modal
                  #-------------------------------------------------------
                  observeEvent(session$userData$rv_show_sample_plot$open, {
+                   
+                   # Determine the number of stages
+                   n_stage <- session$userData$rv_life_stages$dat$Value[session$userData$rv_life_stages$dat$Name == "Nstage"]
+                   
+                   # Build checkbox input of all stage classes possible
+                   opt_1 <- rev(seq(1, n_stage, by = 1))
+                   stg_opt <- paste0("V", opt_1)
+                   names(stg_opt) <- paste0("Stage ", opt_1)
+                   # Default to select largest stage
+                   stage_select <- stg_opt[[1]]
+                   
+                   
                    showModal(
                      modalDialog(
                        title = "Sample Time Series Projection",
@@ -483,13 +516,15 @@ module_matrix_model_preview_server <- function(id) {
                        tagList(
                          
                          radioButtons(ns("samp_plot_type"), "Plot type:",
-                                      c("Stage 4" = "adult",
-                                        "Stage 3" = "subadult",
-                                        "Stage 2" = "juv",
-                                        "Stage 1" = "yoy",
-                                        "Lambda" = "lambda",
-                                        "All Life Stages" = "allstage"),
+                                      c("Plot Stage Classes" = "stage_classes",
+                                       "Lambda" = "lambda",
+                                       "All Life Stages" = "allstage"),
                                       inline  = TRUE),
+                         
+                         checkboxGroupInput(ns("samp_stages"), "Select stages to plot:",
+                                            stg_opt,
+                                            selected = stage_select,
+                                            inline = TRUE),
                          
                          
                          plotlyOutput(ns(

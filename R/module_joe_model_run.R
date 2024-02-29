@@ -37,9 +37,42 @@ module_joe_model_run_server <- function(id) {
       print("Calling module_joe_model_run_server")
       
       #-------------------------------------------------------
-      # DISABLE AND ENABLE 
+      # Socio-economic enable
       #------------------------------------------------------- 
-      # this modal is never disabled ...
+      
+      observeEvent(input$run_with_se_inputs, {
+        if (input$run_with_se_inputs == TRUE) {
+            print("Run with SE inputs")
+          } else {
+            print("Run without SE inputs")
+          }
+      })
+      
+      # Start app with checkbox disabled
+      # Disable the checkbox when the app starts
+      observe({
+        shinyjs::disable("checkbox")
+      })
+      
+      # Only enable checkbox if SE workbook is valid
+      observe({
+        # Checkbox should be disabled
+        se_inputs <- session$userData$rv_se_inputs$socioeconomic_inputs
+        # Socio-economic workbook must exist
+        if(!(is.null(se_inputs))) {
+          # Socio-economic workbook must also be valid
+          if(se_inputs$import_pass) {
+            shinyjs::enable("run_with_se_inputs")
+          } else {
+            shinyjs::disable("run_with_se_inputs")
+            updateCheckboxInput(session, "run_with_se_inputs", value = FALSE)
+          }
+        } else {
+          shinyjs::disable("run_with_se_inputs")
+          updateCheckboxInput(session, "run_with_se_inputs", value = FALSE)
+        }
+      })
+      
 
       #-------------------------------------------------------
       # START OF INPUT MODAL UI
@@ -73,10 +106,15 @@ module_joe_model_run_server <- function(id) {
 
             fluidRow(
               shinydashboard::box(
-                width = 12,
+                width = 8,
                 numericInput(ns("number_of_simulations"), "Number of Simulations", MC.sims, min = 1, max = 1000),
                 textInput(ns("name_of_simulation"), "Name of this Simulation (optional)", "Default"),
                 uiOutput(ns("text_time_estimate"))
+              ),
+              shinydashboard::box(
+                width = 4,
+                div("(Optional) Run with socio-economic inputs representing restoration action"),
+                checkboxInput(ns("run_with_se_inputs"), "Run with Socio-Economic Inputs", value = FALSE)
               )
             ),
 
@@ -315,15 +353,31 @@ module_joe_model_run_server <- function(id) {
             }
           } # library(shiny); runApp()
           
+          
 
+          # ------------------------------------------------------------
+          # Get the socioeconomic_inputs inputs from reactive object
+          # ------------------------------------------------------------
+          socioeconomic_inputs <- isolate({ session$userData$rv_se_inputs$socioeconomic_inputs })
+          
+          # Check if the model should be run with socio-economic inputs
+          run_with_se <- isolate({ input$run_with_se_inputs })
+          
+          if(run_with_se) { 
+            socioeconomic_inputs <- socioeconomic_inputs
+          } else {
+            socioeconomic_inputs <- NULL # Set to NULL (skip SE version)
+          }
+          
           # Try running the Joe model
           jm <- CEMPRA::JoeModel_Run(
               dose = sm_wb_dat_in,
               sr_wb_dat = sr_wb_dat_in,
               MC_sims = n_mc_sims,
-              adult_sys_cap = FALSE # do not filter out non-target stressors
+              adult_sys_cap = FALSE, # do not filter out non-target stressors
+              socioeconomic_inputs = socioeconomic_inputs
           )
-        
+          
           
           print("Finished the Joe Model run...")
           

@@ -280,8 +280,8 @@ module_matrix_model_elements_server <- function(id) {
                  # Density-Independent Components
                  #-------------------------------------------------------
                  observe({
-                   print("pop mod dens-indepent matrix elements...")
                    
+                   print("pop mod dens-indepent matrix elements...")
                    
                    # Reset assume we are clear of errors ...
                    isolate({
@@ -289,17 +289,39 @@ module_matrix_model_elements_server <- function(id) {
                      session$userData$rv_ea_errors$possible_error_msg <- ""
                    })
                    
-                   print("pop mod setup started...")
-                   
                    # Make sure we actually have the data
                    req(session$userData$rv_life_stages$dat)
                    
                    # Gather population model inputs
                    dat <- session$userData$rv_life_stages$dat
                    
+                   print("pop mod setup started...")
+                   
+                   # Fix Nstage to match vector
+                   n_stage <- as.numeric(dat$Value[dat$Name == "Nstage"])
+                   surv_vec <- length(dat$Value[grepl("surv_", dat$Name)])
+                   year_vec <- length(dat$Value[grepl("year_", dat$Name)])
+                   
+                   if((surv_vec == year_vec) & (n_stage != surv_vec)) {
+                     n_stage <- surv_vec
+                     dat$Value[dat$Name == "Nstage"] <- n_stage
+                   }
+                   
+                   
                    # Setup objects for population model
-                   pop_mod_setup <-
+                   #pop_mod_setup <-
+                   #  CEMPRA::pop_model_setup(life_cycles = dat)
+                   
+                   pop_mod_setup <- tryCatch({
+                     # Your code here
                      CEMPRA::pop_model_setup(life_cycles = dat)
+                   }, error = function(e) {
+                     # Return error mode
+                     ret <- list()
+                     ret$possible_error_state <- "Loading..."
+                     ret
+                   })
+                   
                    
                    if (pop_mod_setup$possible_error_state != "All Good") {
                      print("Bad error settings")
@@ -308,8 +330,8 @@ module_matrix_model_elements_server <- function(id) {
                        pop_mod_setup$possible_error_state
                      
                    } else {
-                     print("Parameters ok...")
                      
+                     print("Parameters ok...")
                      
                      # Build matrix elements for population model
                      pop_mod_mat <-
@@ -317,10 +339,13 @@ module_matrix_model_elements_server <- function(id) {
                      
                      # Preview density-independent transition projection_matrix
                      A <- pop_mod_mat$projection_matrix
+                     
                      # Assign nicknames for each stage
-                     snames <-
-                       c("egg_yoy", "juv", "subadult", "adult")
-                     rownames(A) <- colnames(A) <- snames
+                     # snames <-
+                     #  c("egg_yoy", "juv", "subadult", "adult")
+                     # rownames(A) <- colnames(A) <- snames
+                     # print("Check input matrix...")
+                     
                      # Simple density-independent lambda estimate
                      lambda <- popbio::lambda(A)
                      # Simple Eigen analysis
@@ -338,18 +363,18 @@ module_matrix_model_elements_server <- function(id) {
                      # For density
                      ds <- pop_mod_setup$density_stage_symbolic
                      ds_m <-
-                       matrix(as.character(ds), nrow = 4, ncol = 4)
+                       matrix(as.character(ds), nrow = nrow(A), ncol = ncol(A))
                      ds_m <- t(ds_m)
-                     colnames(ds_m) <- c("s1", "s2", "s3", "s4")
-                     rownames(ds_m) <- c("s1", "s2", "s3", "s4")
+                     colnames(ds_m) <- paste("s", 1:ncol(A), sep = "")
+                     rownames(ds_m) <- paste("s", 1:nrow(A), sep = "")
                      
                      # For life stages
                      lss <- pop_mod_setup$life_stages_symbolic
                      lss_m <-
-                       matrix(as.character(lss), nrow = 4, ncol = 4)
+                       matrix(as.character(lss), nrow = nrow(A), ncol = ncol(A))
                      lss_m <- t(lss_m)
-                     colnames(lss_m) <- c("s1", "s2", "s3", "s4")
-                     rownames(lss_m) <- c("s1", "s2", "s3", "s4")
+                     colnames(lss_m) <- paste("s", 1:ncol(A), sep = "")
+                     rownames(lss_m) <- paste("s", 1:nrow(A), sep = "")
                      
                      
                      # Add objects to list
@@ -365,11 +390,6 @@ module_matrix_model_elements_server <- function(id) {
                      session$userData$rv_eigen_analysis$dat$lss_m <- lss_m
                      session$userData$rv_eigen_analysis$dat$ds_m <- ds_m
                      
-                     
-                     
-                     
-                     
-                     
                    }
                    
                    
@@ -378,6 +398,7 @@ module_matrix_model_elements_server <- function(id) {
                  
                  # Calculate density-independent matrix elements...
                  output$dens_independent_comp <- renderUI({
+                   
                    print("Building DI comp...")
                    
                    if (session$userData$rv_ea_errors$possible_error_state) {
@@ -414,13 +435,15 @@ module_matrix_model_elements_server <- function(id) {
                  
                  # Symbolic Transition matrix data table
                  output$dt_lss_m <- renderDataTable({
+                   
                    print("Building DT1...")
                    
                    # Get the transition matrix
                    A <- (session$userData$rv_eigen_analysis$dat$lss_m)
                    # Add names to column
-                   mnames <-
-                     c("Stage 1", "Stage 2", "Stage 3", "Stage 4")
+                   #mnames <-
+                   #   c("Stage 1", "Stage 2", "Stage 3", "Stage 4")
+                   mnames <- paste("Stage ", 1:ncol(A), sep = "")
                    colnames(A) <- mnames
                    rownames(A) <- mnames
                    # Build the JS DT Data Table Object
@@ -447,13 +470,14 @@ module_matrix_model_elements_server <- function(id) {
                  
                  # Symbolic Transition matrix data table
                  output$dt_ds_m <- renderDataTable({
+                   
                    print("Building DT2...")
                    
                    # Get the transition matrix
                    A <- (session$userData$rv_eigen_analysis$dat$ds_m)
                    # Add names to column
-                   mnames <-
-                     c("Stage 1", "Stage 2", "Stage 3", "Stage 4")
+                   mnames <- paste("Stage ", 1:ncol(A), sep = "")
+                   
                    colnames(A) <- mnames
                    rownames(A) <- mnames
                    # Build the JS DT Data Table Object
@@ -481,6 +505,7 @@ module_matrix_model_elements_server <- function(id) {
                  
                  # Transition matrix data table
                  output$dt_transition_matrix <- renderDataTable({
+                   
                    print("Building DT3...")
                    
                    # Get the transition matrix
@@ -488,8 +513,7 @@ module_matrix_model_elements_server <- function(id) {
                      round(session$userData$rv_eigen_analysis$dat$pop_mod_mat$projection_matrix,
                            3)
                    # Add names to column
-                   mnames <-
-                     c("Stage 1", "Stage 2", "Stage 3", "Stage 4")
+                   mnames <- paste("Stage", 1:ncol(A))
                    colnames(A) <- mnames
                    rownames(A) <- mnames
                    # Build the JS DT Data Table Object
@@ -515,14 +539,16 @@ module_matrix_model_elements_server <- function(id) {
                  
                  # Sensitivities matrix data table
                  output$dt_sensitivities_matrix <- renderDataTable({
+                   
                    print("Building DT4...")
                    
                    A2 <-
                      round(session$userData$rv_eigen_analysis$dat$ea$sensitivities, 3)
-                   mnames <-
-                     c("Stage 1", "Stage 2", "Stage 3", "Stage 4")
+                   mnames <- paste("Stage", 1:ncol(A2))
+                   
                    colnames(A2) <- mnames
                    rownames(A2) <- mnames
+                   
                    DT::datatable(
                      A2,
                      editable =  FALSE,
@@ -545,14 +571,16 @@ module_matrix_model_elements_server <- function(id) {
                  
                  # elasticities matrix data table
                  output$dt_elasticities_matrix <- renderDataTable({
+                   
                    print("Building DT5...")
                    
                    A3 <-
                      round(session$userData$rv_eigen_analysis$dat$ea$elasticities, 3)
-                   mnames <-
-                     c("Stage 1", "Stage 2", "Stage 3", "Stage 4")
+                   mnames <- paste("Stage", 1:ncol(A3))
+                   
                    colnames(A3) <- mnames
                    rownames(A3) <- mnames
+                   
                    DT::datatable(
                      A3,
                      editable =  FALSE,
@@ -575,6 +603,7 @@ module_matrix_model_elements_server <- function(id) {
                  
                  # other matrix data table
                  output$dt_stablestage_matrix <- renderDataTable({
+                   
                    print("Building DT6...")
                    
                    repro <-
@@ -585,7 +614,7 @@ module_matrix_model_elements_server <- function(id) {
                    ss <- data.frame(t(ss))
                    repro_ss <- rbind(repro, ss)
                    colnames(repro_ss) <-
-                     c("Stage 1", "Stage 2", "Stage 3", "Stage 4")
+                     mnames <- paste("Stage", 1:length(ss))
                    rownames(repro_ss) <-
                      c("Repro. Value", "Stable Stage")
                    DT::datatable(
@@ -612,6 +641,7 @@ module_matrix_model_elements_server <- function(id) {
                  
                  # other matrix data table
                  output$dt_stablestage_k <- renderDataTable({
+                   
                    print("Building dt_stablestage_k...")
                    
                    ss <- session$userData$rv_eigen_analysis$dat$ea$stable.stage
@@ -632,8 +662,10 @@ module_matrix_model_elements_server <- function(id) {
                    # evaluate whether we are quantifying the initial carrying capacities correctly
                    
                    repro_ss <- rbind(ss, k_stage)
-                   colnames(repro_ss) <-
-                     c("Stage 1", "Stage 2", "Stage 3", "Stage 4")
+                   #colnames(repro_ss) <-
+                   # c("Stage 1", "Stage 2", "Stage 3", "Stage 4")
+                   colnames(repro_ss) <- paste0("Stage ", 1:ncol(ss))
+                   
                    rownames(repro_ss) <-
                      c("Stable Stage", "Stage Capacities K")
                    DT::datatable(

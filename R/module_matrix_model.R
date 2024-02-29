@@ -13,13 +13,16 @@ module_matrix_model_ui <- function(id) {
   ns <- NS(id)
   
   tagList(shinydashboard::box(width = 12,
-                              tags$h3("Population Model"),),
+                              tags$h3("Population Model"),
+                              tags$div(tags$a(href = "https://mattjbayly.github.io/CEMPRA_documentation/07_life_cycle_model.html", "See guidance document help section: Life Cycle Model", target =
+                                                "_blank"))
+                              ),
           fluidRow(
             column(
               width = 8,
               shinydashboard::box(
                 width = 12,
-                tags$h4("Population Model Inputs (vital rates)"),
+                tags$h3("Population Model Inputs (vital rates)"),
                 module_matrix_model_inputs_ui(ns("mm_inputs"))
               ),
             ),

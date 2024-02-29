@@ -65,9 +65,10 @@ ui <- dashboardPage(
       ),
       #tabItem("tab_stressor_sandbox",
       #  tags$p("tab_stressor_sandbox")
-              #module_matrix_model_ui("matrix_model")
-              # library(shiny); runApp()
       #),
+      tabItem("tab_socio_economic",
+              module_socio_economic_ui("socio_economic")
+      ),
       tabItem("tab_import",
               module_import_ui("import")
       ),

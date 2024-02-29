@@ -69,12 +69,29 @@ module_scenario_csc_server <- function(id) {
                                                  ),
                                                  # Action button
                                                  fluidRow(column(
-                                                   actionButton(
-                                                     ns("clear_button"),
-                                                     "Clear data from previous scenarios for new comparison set"
-                                                   ),
-                                                   width = 12
+                                                   width = 12,
+                                                   tagList(
+                                                     actionButton(
+                                                       ns("clear_button"),
+                                                       "Clear data from previous scenarios for new comparison set"
+                                                     ),
+                                                     tags$br(),
+                                                   )
                                                  )),
+                                                 
+                                                 # Weightings
+                                                 fluidRow(column(
+                                                   width = 12,
+                                                   selectInput(ns("location_weighting"), "Weight Location Scores By:",
+                                                               c("Equal Weight Per Location" = "equal",
+                                                                 "By Area (geometry)" = "area",
+                                                                 "By Length (geometry)" = "length",
+                                                                 "User Attribute: Rearing_area" = "area1",
+                                                                 "User Attribute: Spawning_area" = "area2",
+                                                                 "Gears" = "gear")),
+                                                   )
+                                                 ),
+                                                 
                                                  fluidRow(column(plotlyOutput(
                                                    ns("scenario_boxplots")
                                                  ), width = 12)),

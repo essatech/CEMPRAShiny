@@ -154,6 +154,7 @@ module_huc_stressor_magnitude_server <- function(id) {
                        tags$p(
                          "Multiple HUCs selected. Use the table below to set stressor magnitude values for the selected HUCs. Note that entering a value in any of the cells will update the values for all the selected HUCs. Leave values blank to keep original values for each HUC."
                        ),
+                       tags$a(href = "https://mattjbayly.github.io/CEMPRA_documentation/06_r_shiny_app.html#adjust-magnitude", "See help section", target = "_blank"),
                        tags$div(
                          uiOutput(ns("csc_huc_indicator"))
                        )
@@ -421,7 +422,7 @@ module_huc_stressor_magnitude_server <- function(id) {
                        # Update stressor magnitude value for HUC or selected HUCs
                        # Update the reactive values
                        if(class(session$userData$rv_stressor_magnitude$sm_dat$HUC_ID) == "numeric") {
-                        selected_ids <- as.numeric(as.character(selected_ids))
+                         selected_ids <- as.numeric(as.character(selected_ids))
                        }
 
 

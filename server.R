@@ -19,6 +19,7 @@ server <- function(input, output, session) {
   module_matrix_model_server("matrix_model")
   module_export_server("export")
   module_import_server("import")
+  module_socio_economic_server("socio_economic")
   
   
   # Call the server function portion of the `scenario_table_module.R` module file
