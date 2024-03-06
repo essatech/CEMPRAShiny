@@ -108,7 +108,7 @@ module_joe_model_run_server <- function(id) {
               shinydashboard::box(
                 width = 8,
                 numericInput(ns("number_of_simulations"), "Number of Simulations", MC.sims, min = 1, max = 1000),
-                textInput(ns("name_of_simulation"), "Name of this Simulation (optional)", "Default"),
+                textInput(ns("name_of_simulation"), "Name of this Scenario", "Default"),
                 uiOutput(ns("text_time_estimate"))
               ),
               shinydashboard::box(

@@ -205,6 +205,14 @@
   display: none;
 }
 
+#socio_economic-run_joe_model_se-open_joe_modal_form {
+  color: white;
+  background-color: #d73925;
+}
+
+#socio_economic-run_joe_model_se-name_of_simulation {
+  background-color: #feffc6;
+}
 
 
 .centered-table {

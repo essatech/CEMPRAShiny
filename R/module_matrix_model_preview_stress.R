@@ -30,12 +30,35 @@ module_matrix_model_preview_stress_ui <- function(id) {
         accordionItem(
           title = htmlOutput(ns('pm_ps_label')),
           color = "danger",
-          collapsed = TRUE,
+          collapsed = FALSE,
           tagList(
-            numericInput(ns("pm_ps_val_mean"), label = "Mean Value", value = NULL),
-            numericInput(ns("pm_ps_val_sd"), label = "SD", value = NULL),
-            numericInput(ns("pm_ps_val_lwr"), label = "Lower Limit", value = NULL),
-            numericInput(ns("pm_ps_val_upr"), label = "Upper Limit", value = NULL)
+            
+            fluidRow(
+              column(
+                width = 6,
+                numericInput(ns("pm_ps_val_mean"), label = "Mean", value = NULL),
+              ),
+              column(
+                width = 6,
+                numericInput(ns("pm_ps_val_sd"), label = "SD", value = NULL)
+              )
+              ),
+            
+            
+            fluidRow(
+              column(
+                width = 6,
+                numericInput(ns("pm_ps_val_lwr"), label = "Lower Lim.", value = NULL),
+              ),
+              column(
+                width = 6,
+                numericInput(ns("pm_ps_val_upr"), label = "Upper Lim.", value = NULL)
+              ),
+            )
+            # numericInput(ns("pm_ps_val_mean"), label = "Mean Value", value = NULL),
+            # numericInput(ns("pm_ps_val_sd"), label = "SD", value = NULL),
+            # numericInput(ns("pm_ps_val_lwr"), label = "Lower Limit", value = NULL),
+            # numericInput(ns("pm_ps_val_upr"), label = "Upper Limit", value = NULL)
           ),
         )
       )

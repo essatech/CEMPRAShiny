@@ -134,7 +134,7 @@ module_huc_results_server <- function(id) {
                  
                  # Call the sub-modules
                  module_huc_stressor_magnitude_server("stressor_magnitude")
-                 module_joe_model_run_server("run_joe_model")
+                 module_joe_model_run_server("run_joe_model") # Run from map module
                  module_joe_model_csc_plots_server("joe_model_csc_plots_all")
                  module_scenario_csc_server("scenario_csc")
                  module_joe_model_csc_plots_selected_server("open_joe_modal_csc_plots_selected")
