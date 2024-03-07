@@ -15,19 +15,6 @@ module_se_table_ui <- function(id) {
   ns <- NS(id)
   
   tagList(
-    fluidRow(column(
-      width = 2,
-      actionButton(
-        ns("add_row"),
-        "Add",
-        class = "btn-success",
-        style = "color: #fff;",
-        icon = icon('plus'),
-        width = '100%'
-      ),
-      tags$br(),
-      tags$br()
-    )),
     fluidRow(
       column(
         width = 12,
@@ -191,15 +178,6 @@ module_se_table_server <- function(id) {
                  
                  # Add new entry
                  
-                 module_se_table_edit_server(
-                   "add_row",
-                   modal_title = "Add Record",
-                   row_to_edit = function()
-                     NULL,
-                   modal_trigger = reactive({
-                     input$add_row
-                   })
-                 )
                  
                  # Trigger the row to edit
                  row_to_edit <-

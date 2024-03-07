@@ -11,6 +11,8 @@ rm(list = ls())
 # Load necessary libraries
 # devtools::install_github("essatech/CEMPRA", force = TRUE)
 library(CEMPRA) # Download instructions: https://github.com/essatech/CEMPRA/
+
+# Load other libraries from CRAN
 library(dplyr)
 library(readxl)
 library(writexl)
