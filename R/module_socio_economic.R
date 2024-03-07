@@ -186,7 +186,53 @@ module_socio_economic_ui <- function(id) {
       ),
     ),
     column(width = 3,
-           "PLACEHOLDER add content here...")
+           
+           shinydashboard::box(
+             width = 12,
+             
+             tags$h4("Instructions"),
+             tags$p("See YouTube Video tutorials for:"),
+             tags$a("Video Tutorial 1: SE Module Overview", href = "https://www.youtube.com/watch?v="),
+             tags$br(),
+             tags$a("Video Tutorial 2: SE Data Inputs", href = "https://www.youtube.com/watch?v="),
+             tags$br(),
+             tags$br(),
+             tags$b("Experiment with Example Datasets:"),
+             tags$br(),
+             tags$ul(
+                     tags$li(tags$a(href = "/demo/se_stressor_response.xlsx", 
+                                    download = "/demo/se_stressor_response.xlsx",
+                                    "Demo Stressor-Response Input Workbook")),
+                     tags$li(tags$a(href = "/demo/se_stressor_magnitude.xlsx", 
+                                    download = "/demo/se_stressor_magnitude.xlsx",
+                                    "Demo Stressor-Magnitude Input Workbook")),
+                     tags$li(tags$a(href = "/demo/se_locations.gpkg", 
+                                    download = "/demo/se_locations.gpkg",
+                                    "Demo Locations GIS")),
+                     tags$li(tags$a(href = "/demo/socio_economic_input.xlsx", 
+                                    download = "/demo/socio_economic_input.xlsx",
+                                    "Demo Socio-economic Input Workbook"))
+             ),
+             
+             tags$br(),
+             tags$br(),
+             tags$b("The general workflow is as follows:"),
+             tags$ol(class = "pm-ht",
+               tags$li("Clear the cache of data from previous runs by clicking the grey clear data button (to the right)."),
+               tags$li("Navigate to the Upload Data tab."),
+               tags$li("Upload a stressor response file, a stressor magnitude file and a socio-economic input file (see examples above)."),
+               tags$li("The Data Upload module checks input datasets for potential issues. Pay special attention to any red error messages (if they appear), read error message carefully, fix input workbooks, and re-upload until all the error messages disappear."),
+               tags$li("Navigate back to the Socio-Economic tab and click the red button to run the Joe Model."),
+               tags$li("Select stressors and iterations and then give the scenario a unique name like “default”, “baseline”, or “status-quo”, let the model run and review the results on this page."),
+               tags$li("When ready, re-run the Joe Model, but this time assigns a new name for the scenario, such as “Restoration”, then click the checkbox “Run with Socio-Economic Inputs” and click the “Run the Joe Model” to run the model with the socio-economic inputs applied to the calculations."),
+               tags$li("If the data inputs are set up appropriately,  the model will run and apply the restoration actions"),
+               tags$li("Repeat this process as many times as necessary to create multiple restoration scenarios for comparison."),
+               tags$li("Be creative and try uploading different stressor management files to simulate the effects of restoration with future climate change etc. It is also possible that there may be multiple restoration action workbooks to represent different restoration portfolios."),
+               tags$li("Review the diagnostic plots to help inform restoration planning."),
+               tags$li("Use the Restoration Projects: Location Implementation tabs to explore a specific project (see blue buttons on the table at the bottom of this page)."),
+               tags$li("Export and save results as needed via screen shot or data download module.")
+             )
+           ))
   ))
 }
 
