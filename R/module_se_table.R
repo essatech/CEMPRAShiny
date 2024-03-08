@@ -24,7 +24,7 @@ module_se_table_ui <- function(id) {
         tags$br()
       )
     ),
-    tags$script(src = "/js/main_table_module.js"),
+    tags$script(src = "./js/main_table_module.js"),
     tags$script(paste0("main_table_module_js('", ns(''), "')"))
   )
 }
