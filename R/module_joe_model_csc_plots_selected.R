@@ -11,7 +11,7 @@ module_joe_model_csc_plots_selected_ui <- function(id) {
   ns <- NS(id)
   # Single action button to call modal
   actionButton(ns("open_joe_modal_csc_plots_selected"),
-               tags$b("Selected watersheds"),
+               tags$b("For selected locations"),
                class="chart-line clean-button",
                width = "100%")
   
@@ -74,7 +74,7 @@ module_joe_model_csc_plots_selected_server <- function(id) {
               width = 12,
               fluidRow(
                 column(width = 12,
-                       tags$p("This section provides the Joe Model results for the selected HUCs. The following table contains summary statistics for the system capacity (SC) across each simulation (batch replicate). The first column describes variability in the global mean (how each batch replicate varies) and the second column describes variability across the selected HUCs. A histogram is included (below) to visualize system capacity across selected HUCs and batch replicates."),
+                       tags$p("This section provides the Joe Model results for the selected location(s). The following table contains summary statistics for the system capacity (SC) across each simulation (batch replicate). The first column describes variability in the global mean (how each batch replicate varies) and the second column describes variability across the selected location(s). A histogram is included (below) to visualize system capacity across selected locations and batch replicates."),
                 )
               ),
               fluidRow(
@@ -84,10 +84,8 @@ module_joe_model_csc_plots_selected_server <- function(id) {
                        )
               ),
               fluidRow(
-                column(DT::dataTableOutput(ns("csc_tables")), width = 10)
-              ),
-              fluidRow(
-                column(plotOutput(ns("csc_hist")), width = 10)
+                column(DT::dataTableOutput(ns("csc_tables")), width = 6),
+                column(plotOutput(ns("csc_hist")), width = 6)
               )
             ),
             fluidRow(
@@ -95,7 +93,7 @@ module_joe_model_csc_plots_selected_server <- function(id) {
                 width = 12,
                 fluidRow(
                   column(width = 12,
-                         tags$p("Histograms of cumulative system capacity can also be generated individually for each HUC, however the rendering process is slow. Click the button below to generate cumulative system capacity plots across all selected HUCs individually."),
+                         tags$p("Histograms of cumulative system capacity can also be generated individually for each location, however the rendering process is slow. Click the button below to generate cumulative system capacity plots across all selected HUCs individually."),
                   )
                 ),
                 actionButton(ns("csc_show_all_plots"), "display individual plots for selected HUCs (slow rendering)"),
@@ -218,7 +216,7 @@ module_joe_model_csc_plots_selected_server <- function(id) {
             CE_mean = mean(CE, na.rm = TRUE)
           )
         
-        hist(h_scores$CE_mean * 100, xlab = "mean sys. capacity per HUC (%)", main = "Selected HUCs")
+        hist(h_scores$CE_mean * 100, xlab = "mean sys. capacity per location (%)", main = "Selected Locations")
         
       })
       

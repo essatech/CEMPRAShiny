@@ -29,7 +29,7 @@ module_huc_results_ui <- function(id) {
         color = 'blue',
         value = module_huc_stressor_magnitude_ui(ns("stressor_magnitude")),
         icon = icon("sliders-h"),
-        subtitle = "Modify the stressor magnitude for selected watersheds"
+        subtitle = "Adjust stressor magnitude values for selected watersheds"
       ),
       
       
@@ -82,7 +82,7 @@ module_huc_results_ui <- function(id) {
             color = 'blue',
             value = module_joe_model_csc_plots_selected_ui(ns("open_joe_modal_csc_plots_selected")),
             icon = icon("sliders-h"),
-            subtitle = "Plot the cumulative system capacity for selected watersheds"
+            subtitle = "Plot the cumulative system capacity for selected locations"
           ),
           
           
@@ -91,7 +91,7 @@ module_huc_results_ui <- function(id) {
             color = 'blue',
             value = module_joe_model_csc_plots_ui(ns("joe_model_csc_plots_all")),
             icon = icon("sliders-h"),
-            subtitle = "Plot the cumulative system capacity for all watersheds"
+            subtitle = "Plot the cumulative system capacity for all locations"
           ),
           
           infoBox(

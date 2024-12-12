@@ -14,7 +14,7 @@ module_huc_stressor_magnitude_ui <- function(id) {
   # Single action button to call modal
   actionButton(
     ns("adjust_stressor_magnitude"),
-    tags$b("Adjust Magnitude"),
+    tags$b("Edit Location"),
     class = "chart-line clean-button",
     width = "100%"
   )
@@ -130,9 +130,9 @@ module_huc_stressor_magnitude_server <- function(id) {
                      name <- strsplit(selected_raw, "\\|")[[1]][2]
                      tl <- tagList(
                        tags$h4(name, style = "color: #3c8dbc;"),
-                       tags$h4(paste0("HUC ID: ", id), style = "color: #3c8dbc;"),
+                       tags$h4(paste0("Location ID: ", id), style = "color: #3c8dbc;"),
                        tags$p(
-                         "Use this table to modify the underlying stressor values for selected HUCs. Users may wish to modify values to represent some type of recovery action or habitat loss. Click on cells in the table below to update the stressor magnitude for the selected unit. Adjust the mean value for each stressor (Mean), the standard deviation (SD), the distribution type (options are: normal or lognormal), the lower limit and upper limit (for stochastic simulations). If only one HUC is selected then values will appear in the table; however, if multiple HUCs are selected then the table will appear blank. When multiple HUCs are selected all modified values will be shared across the selected HUCs. The mean system capacity is shown for selected HUCs to provide a preview of the Joe Model output."
+                         "Use this table to modify the underlying stressor values for selected locations. Users may wish to modify values to represent some type of recovery action or habitat loss. Click on cells in the table below to update the stressor magnitude for the selected unit. Adjust the mean value for each stressor (Mean), the standard deviation (SD), the distribution type (options are: normal or lognormal), the lower limit and upper limit (for stochastic simulations). If only one location is selected then values will appear in the table; however, if multiple locations are selected then the table will appear blank. When multiple locations are selected all modified values will be shared across the selected locations. The mean system capacity is shown for selected locations to provide a preview of the Joe Model output."
                        ),
                        tags$div(
                          uiOutput(ns("csc_huc_indicator"))

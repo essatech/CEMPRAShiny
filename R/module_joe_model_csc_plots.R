@@ -11,7 +11,7 @@ module_joe_model_csc_plots_ui <- function(id) {
   ns <- NS(id)
   # Single action button to call modal
   actionButton(ns("open_joe_modal_csc_plots_all"),
-                  tags$b("All waterseds"),
+                  tags$b("Across all locations"),
                   class="chart-line clean-button",
                   width = "100%")
 
@@ -66,16 +66,16 @@ module_joe_model_csc_plots_server <- function(id) {
                 width = 12,
                 fluidRow(
                   column(width = 12,
-                         tags$p("This section provides an overview of the Joe Model results for the entire study area. The following table contains summary statistics for the system capacity (SC) across each simulation (batch replicate). The first column describes variability in the global mean (how each batch replicate varies) and the second column describes variability across individual HUCs. A histogram is included (below) to visualize system capacity across all HUCs and batch replicates."),
+                         tags$p("This section provides an overview of the Joe Model results for the entire study area. The following table contains summary statistics for the cumulative system capacity (SC) across each simulation (batch replicate) and locations. The first column describes summary statistics across the batch replicates (i.e., take the mean across locations for each batch replicate then calculate summary statistics across the batch replicates). The second column describes summary statistics across all locations and batch replicates. A histogram is included (below) to visualize system capacity across all HUCs and batch replicates. Detailed plots can be generated for each watershed but they take longer to render (click the button to generate rendering)."),
                          )
                 ),
                 fluidRow(
                   column(
                     DT::dataTableOutput(ns("csc_tables")),
-                    width = 12)
-                ),
-                fluidRow(
-                  column(plotOutput(ns("csc_hist")), width = 10)
+                    width = 6),
+                  column(
+                    column(plotOutput(ns("csc_hist")), width = 10),
+                    width = 6)
                 )
               ),
             fluidRow(
@@ -138,8 +138,8 @@ module_joe_model_csc_plots_server <- function(id) {
         my_dt <- DT::datatable(
           df_csc_res,
           editable =  FALSE,
-          caption = "MMean system capacity summary tables across all simulations for the entire system (Global Mean SCAcross Simulations) and across individual HUCs (Across HUCs)",  
-          colnames = c('Global Mean SC (per simulation, %)' = 'sims', 'Mean SC Across HUCs (%)' = 'hucs'),
+          caption = "Mean system capacity summary tables across all simulations for the entire system (Global Mean System Capacity Across Simulations) and across individual locations",  
+          colnames = c('Global Mean SC (per simulation, %)' = 'sims', 'Mean SC Across Locations (%)' = 'hucs'),
           filter = "none",
           selection = "single",
           rownames = TRUE,
@@ -177,7 +177,7 @@ module_joe_model_csc_plots_server <- function(id) {
             CE_mean = mean(CE, na.rm = TRUE)
           )
         
-        hist(h_scores$CE_mean * 100, xlab = "mean sys. capacity per HUC (%)", main = "Across HUCs")
+        hist(h_scores$CE_mean * 100, xlab = "mean sys. capacity per location (%)", main = "Across Locations")
       
       })
       

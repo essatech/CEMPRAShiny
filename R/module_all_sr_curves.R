@@ -124,10 +124,10 @@ module_all_sr_curves_server <- function(id) {
                          height = 220
                        ) %>%
                        dyAxis("x",
-                              label = "Raw Stressor Values",
+                              label = "Raw Stressor Magnitude Values",
                               valueFormatter = JS(myvFormatter)) %>%
                        dyAxis("y",
-                              label = "Mean System Capacity (%)",
+                              label = "Stressor Response Score (%)",
                               valueFormatter = JS(myvFormatter)) %>%
                        dySeries(
                          c("lwr", "mean_system_capacity", "upr"),

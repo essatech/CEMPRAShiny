@@ -40,8 +40,10 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
   moduleServer(
     id,
     function(input, output, session) {
+      
       ns <- session$ns
-
+      
+      
       # Set the label
       output$variable_label <- renderUI({
         # print("Variable Label")
@@ -116,12 +118,17 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
             }
             
             current_id <- current
+            
+            # JS can not have space in IDs
+            current_id <- gsub(" ", "__", current_id, fixed = TRUE)
+            active_id <- gsub(" ", "__", active, fixed = TRUE)
+            
             # deal with space and jQuery ID
             if(grepl(" ", current_id)) {
               current_id <- gsub(" ", "\\\ ", current_id, fixed = TRUE)
             }
             
-            if (active == current) {
+            if (active_id == current) {
               # print("Adding class")
               q_code <- paste0("jQuery('#main_map-", current_id, "-var_id').addClass('var-selected');")
               shinyjs::runjs(code = q_code)
@@ -173,13 +180,16 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
       #-------------------------------------------------------
       # Open the stressor response dialog box
       observeEvent(input$response_plot, {
-
+        
         # Dont load until button clicked
         req(input$hiddenload)
 
         this_var <- session$userData$rv_stressor_response$pretty_names[stressor_index]
         # print(paste0("Stressor response modal is open for ... ", this_var))
 
+        # Increment modal refresh counter
+        print("----SR MODAL OPEN ------")
+        
         # -------------------------------------------------------
         # If interaction matrix - show but not editable
         if (is.na(this_var)) {
@@ -244,7 +254,7 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
           showModal(modalDialog(
             title = paste0("Stressor-Response Relationship: ", this_var_pretty),
             tagList(
-              tags$p("Use the table below to edit and adjust the stressor-response (dose-response) relationship for August Flow rate. Click on cells in the table to adjust values. The graph shows the dose:response relationship between the raw stressor values (x-axis) and the mean system capacity (y-axis). The red line shows the mean value, and the shading represents uncertainty in the relationship. The red shading represents one standard deviation, and the grey shading represents the upper and lower bounds of min and max values. Click and drag within the graph window to zoom in on particular trends; double-click the graph to zoom out to full view."),
+              tags$p("Use the table below to edit and adjust the stressor-response (dose-response) relationship. Click on cells in the table to adjust values. The graph shows the dose:response relationship between the raw stressor values (x-axis) and the stressor-response score (or mean system capacity, y-axis). The red line shows the mean value, and the shading represents uncertainty or stochasticity in the relationship. The red shading represents one standard deviation, and the grey shading represents the upper and lower bounds of min and max values. Click and drag within the graph window to zoom in on particular trends; double-click the graph to zoom out to full view."),
               tags$b(textOutput(ns("text_preview"))),
               fluidRow(
                 shinydashboard::box(
@@ -255,11 +265,16 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
               fluidRow(
                 shinydashboard::box(
                   width = 12,
-                  tags$p("Double-click a cell to edit its value."),
+                  tags$p("Edit the underlying Stressor-Response Relationship. Double-click a cell to edit its value. Remember the SD, Lower Limit, and Upper Limit define stochasticity and uncertainty of the response score for a given level of a stressor."),
                   DTOutput(
                     ns("stressor_response_dt")
                   ),
-                  actionButton(ns("close_sr_modal"), "Close stressor-response module", style = "margin: 15px;")
+                  actionButton(
+                    ns("close_sr_modal"), 
+                    label = tagList(icon("save"), "Save SR Function Updates and Close Module"), 
+                    style = "margin: 15px; color: white;",
+                    class = "btn btn-success"
+                  )
                 )
               ),
               
@@ -271,7 +286,6 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
                     ns("hist_vals_plot")
                   ),
                 ))
-              
             ),
             easyClose = TRUE,
             size = "l",
@@ -279,12 +293,19 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
           ))
         }
       })
+      
+      # main_map-BEC Unit Score runoff-var_id
+      # #main_map-MWAT Max. Wekly Avg. Strm Tmp-var_id
 
 
       #-------------------------------------------------------
       # Close stressor response modal with custom button
       #-------------------------------------------------------
       observeEvent(input$close_sr_modal, {
+        print("sr modal closed")
+        # Trigger reloaf of data
+        session$userData$rv_srdt$reload <- 2
+        print(session$userData$rv_srdt$reload)
         removeModal()
       })
 
@@ -299,9 +320,18 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
         # Do not run on app load
         req(session$userData$rv_stressor_response$active_layer)
-
+        
+        # Trigger reloaf of data
+        print("----SR MODAL DATA ------")
+        session$userData$rv_srdt$reload <- 1
+        print(session$userData$rv_srdt$reload)
+        
         # Get all SR data
         sr_data <- isolate(session$userData$rv_stressor_response$sr_dat)
+        
+        # Nov 9 2024 update MJB isolate causing issue with refresh
+        # sr_data <- session$userData$rv_stressor_response$sr_dat
+        
         # Filter for target layer
         this_var <- session$userData$rv_stressor_response$active_layer # e.g., temperature
         table_vals <- sr_data[[this_var]] # e.g., temperature
@@ -312,8 +342,8 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
           # The Stressor column is not editable
           editable = TRUE, # list(target = "cell", disable = list(columns = c(1))),
           colnames = c(
-            "Raw Value" = "value", "Mean System Capacity (0-100)" = "mean_system_capacity",
-            "SD (0-100)" = "sd", "Lower Limit (0)" = "lwr", "Upper Limit (100)" = "upr"
+            "Raw Stressor Value" = "value", "Stressor-Response Score (0-100)" = "mean_system_capacity",
+            "SD of Resp. (0-100)" = "sd", "Lower Limit of Resp. (0)" = "lwr", "Upper Limit of Resp. (100)" = "upr"
           ),
           filter = "none",
           selection = "single",
@@ -359,7 +389,7 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
         
         hist(sm_dat$Mean, main = NA, xlab = this_var)
         for(ll in 1:length(table_vals$value)) {
-          abline(v = table_vals$value[ll], col = "grey", lty = 2)
+          abline(v = table_vals$value[ll], col = "purple", lty = 2, lwd = 2)
         }
         
       })
@@ -370,16 +400,18 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
       #-------------------------------------------------------
       # Display mean min and max
       output$text_preview <- renderText({
-        this_var <- isolate(session$userData$rv_stressor_response$active_layer) # e.g., temperature
+        #this_var <- isolate(session$userData$rv_stressor_response$active_layer) # e.g., temperature # OLD
+        this_var <- session$userData$rv_stressor_response$active_layer # New Nov 9th 2024
         # Stressor magnitude data
         sm_df <- session$userData$rv_stressor_magnitude$sm_dat
         # Subset to targer variable
         sm_sub <- sm_df[which(sm_df$Stressor == this_var), ]
         my_mean <- round(mean(sm_sub$Mean, na.rm = TRUE), 2)
+        my_median <- round(median(sm_sub$Mean, na.rm = TRUE), 2)
         my_min <- min(sm_sub$Mean, na.rm = TRUE)
         my_max <- max(sm_sub$Mean, na.rm = TRUE)
-
-        data_rng_txt <- paste0("HUC Values, Mean: ", my_mean, " (Min: ", my_min, ", Max: ", my_max, ")")
+        
+        data_rng_txt <- paste0("Summary of raw stressor values, Mean: ", my_mean, ", Median: ", my_median, " (Min: ", my_min, ", Max: ", my_max, ")")
         return(data_rng_txt)
       })
 
@@ -392,8 +424,6 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
       # update the stessor response reactive values
       observeEvent(input$stressor_response_dt_cell_edit, {
         
-        print("SR Cell Edit Event...")
-
         # Get new value of edited cell
         info <- input$stressor_response_dt_cell_edit
 
@@ -495,8 +525,8 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
         # Start and return the dygraph plot
         dygraph(table_vals, main = pretty_lab) %>%
-          dyAxis("x", label = "Raw Stressor Values", valueFormatter = JS(myvFormatter)) %>%
-          dyAxis("y", label = "Mean System Capacity (%)") %>%
+          dyAxis("x", label = "Raw Stressor Magnitude Values", valueFormatter = JS(myvFormatter)) %>%
+          dyAxis("y", label = "Scaled Stressor Response Score (%)") %>%
           dySeries(c("lwr", "mean_system_capacity", "upr"), label = "msc", color = "grey") %>%
           dySeries(c("lwr_sd", "mean_system_capacity", "upr_sd"), label = "Mean Sys. Cap.", color = "red")
         

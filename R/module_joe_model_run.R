@@ -10,10 +10,13 @@ module_joe_model_run_ui <- function(id) {
   
   ns <- NS(id)
   # Single action button to call modal
-  actionButton(ns("open_joe_modal_form"),
-                  tags$b("Joe Model"),
-                  class="chart-line clean-button",
-                  width = "100%")
+  actionButton(
+    ns("open_joe_modal_form"),
+    tags$b("Run Joe Model"),
+    style = "color: white; background-color: #c94126; border-color: #b8351c; width: 100%;",
+    class = "chart-line clean-button",
+    width = "100%"
+  )
 
 }
 
@@ -98,7 +101,7 @@ module_joe_model_run_server <- function(id) {
                 actionButton(ns("selectall"),
                              label = "Select/Deselect all"),
                 
-                tags$p("*Note that only variables associated with adult System Capacity can be run in the Joe Model. Other stressors linked to non-adult life stages are excluded.")
+                tags$p("*Remember the Joe Model calculates the cumulative system capacity score across stressors as the product of response score.")
                 
                 
               )
@@ -150,7 +153,10 @@ module_joe_model_run_server <- function(id) {
         
         # Exclude variables that are not associated with adults
         s_options <- isolate(session$userData$rv_stressor_response$main_sheet)
-        s_options <- s_options[which(s_options$Life_stages == "adult"), ]
+        
+        # MJB update Oct 1st include all
+        #s_options <- s_options[which(s_options$Life_stages == "adult"), ]
+        
         s_acceptable <- unique(s_options$Stressors)
         
         # Filter to exlcude any variables associated with early life stages
@@ -199,7 +205,7 @@ module_joe_model_run_server <- function(id) {
       
         # Exclude variables that are not associated with adults
         s_options <- session$userData$rv_stressor_response$main_sheet
-        s_options <- s_options[which(s_options$Life_stages == "adult"), ]
+        #s_options <- s_options[which(s_options$Life_stages == "adult"), ]
         s_acceptable <- unique(s_options$Stressors)
         
         # Filter to exlcude any variables associated with early life stages

@@ -459,7 +459,15 @@ module_import_server <- function(id) {
                      
                      # Fix col names - if needed
                      cnames <- colnames(hmdl)
+                     
                      if (!("HUC_ID" %in% cnames)) {
+                       
+                       # if("id" %in% tolower(colnames(cnames)) {
+                       #
+                       # } else {
+                       #
+                       # }
+                       
                        use_id <-
                          which(grepl("id", tolower(cnames)))[1]
                        hmdl$HUC_ID <- hmdl[[use_id]]

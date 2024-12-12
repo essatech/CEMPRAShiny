@@ -165,6 +165,7 @@ module_main_map_server <- function(id) {
                  # Reactive expression to reload, repaint or redraw polygons
                  # ---------------------------------------------------------
                  r_huc_polygons <- reactive({
+                   
                    print("r_huc_polygons() triggered ...")
                    
                    # If clear all selected - then trigger redraw.
@@ -234,6 +235,7 @@ module_main_map_server <- function(id) {
                      } else {
                        # Normal stressor interpolation using curve
                        # Convert raw variable values to system capacity
+                       
                        interp <- approx(
                          x = resp_curv$value,
                          y = resp_curv$mean_system_capacity,
@@ -552,7 +554,7 @@ module_main_map_server <- function(id) {
                    if (session$userData$rv_map_shape()) {
                      tags$p(session$userData$rv_map_location$huc_id, style = "float: right; color:#3b9ab2;")
                    } else {
-                     tags$p("HUC ID", style = "float: right; color:#3b9ab2;")
+                     tags$p("Location ID", style = "float: right; color:#3b9ab2;")
                    }
                  })
                  
@@ -560,7 +562,7 @@ module_main_map_server <- function(id) {
                    if (session$userData$rv_map_shape()) {
                      tags$p(session$userData$rv_map_location$huc_name, style = "float: left; color:#3b9ab2;")
                    } else {
-                     tags$p("Basin Name", style = "float: left; color:#3b9ab2;")
+                     tags$p("Location Name", style = "float: left; color:#3b9ab2;")
                    }
                  })
                  

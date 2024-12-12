@@ -212,25 +212,40 @@ module_matrix_model_preview_server <- function(id) {
                    # end of isolate
                    # -------------------------------------------
                    
-                   print("RUN A SAMPLE POP PROJECTION...")
 
+                   
+                   
                    # Gather population model inputs
+                   life_cycles <- isolate({ session$userData$rv_life_stages$dat })
+                   
+                   print("RUN A SAMPLE POP PROJECTION...")
+                   
+                   p.cat <- life_cycles$Value[life_cycles$Name == "p.cat"]
+                   p.cat <- ifelse(length(p.cat) == 0, 0, p.cat)
+                   p.cat <- ifelse(is.na(p.cat), 0, p.cat)
+                   
                    # Setup objects for population model
                    pop_mod_setup <-
-                     CEMPRA::pop_model_setup(life_cycles = dat)
+                     CEMPRA::pop_model_setup(life_cycles = life_cycles)
                    # Build matrix elements for population model
                    pop_mod_mat <-
                      CEMPRA::pop_model_matrix_elements(pop_mod_setup = pop_mod_setup)
                    
+                   print("Done setup...")
                    
                    # Set the K.adj (K adjustment prior to pop model run)
                    life_histories <- pop_mod_mat$life_histories
+                   
                    # Mathematical expression of the transition matrix
                    life_stages_symbolic <-
                      pop_mod_mat$life_stages_symbolic
+                   
                    # Mathematical expression of the density matrix
                    density_stage_symbolic <-
                      pop_mod_mat$density_stage_symbolic
+                   
+                   # determine if anadromous
+                   anadromous <- pop_mod_setup$anadromous
                    
                    
                    all_outputs <- list()
@@ -260,10 +275,16 @@ module_matrix_model_preview_server <- function(id) {
                          # initial pop size as stage-structure vector
                          Nyears = test_n_years,
                          # years to run simulation
-                         p.cat = 0,
+                         p.cat = p.cat,
+                         anadromous = anadromous,
                          # Probability of catastrophe
                          CE_df = CE_df_rep
                        )
+                     
+                     # max(baseline$N[, 5])
+                     # life_histories$Ka
+                     
+                     
                      # Gather
                      all_outputs[[ii]] <- baseline
                    }

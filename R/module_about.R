@@ -41,7 +41,7 @@ module_about_ui <- function(id) {
             ),
             tags$h3("Contributors"),
             tags$p(
-              "Matthew Bayly, MJBA, Alexandra Tekatch, ESSA, Dr. Jordan Rosenfeld, UBC/BC-WLRS, Andrew Paul, AEP, Kyle Wilson, CCIRA, Dr. Eva Enders, INRS, Lauren Jarvis, DFO, Julian Heavyside, ESSA, Pedro Gonzalez, UBC, Laura MacPherson, AEP, Isuru Dharmasena, Marc Porter, ESSA"
+              "Jordan Rosenfeld, UBC/BC-WLRS; Matthew Bayly, MJBA; Alexandra Tekatch, ESSA; Andrew Paul, AEP, Kyle Wilson, SFU; Eva Enders, INRS; Lauren Jarvis, DFO; Sierra Sullivan UB; Anas Usoff UBC; Laura MacPherson, AEP; Julian Heavyside, ESSA; Pedro Gonzalez, UBC; Isuru Dharmasena; Marc Porter, ESSA"
             ),
             tags$p(
               style = "color: grey;",

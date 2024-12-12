@@ -1,4 +1,5 @@
 module_setup_reactives <- function(session = NA) {
+  
   print("Setting up reactive values for user session...")
   
   # Determine if we are using polygons or lines
@@ -24,6 +25,10 @@ module_setup_reactives <- function(session = NA) {
     interaction_values = sr_wb_dat$MInt
   )
   session$userData$rv_stressor_response <- rv_stressor_response
+  
+  # Trigger data table reload
+  session$userData$rv_srdt <- reactiveValues(reload = 0)
+  
   
   # Life cycle parameters object for population model
   rv_life_stages <- reactiveValues(dat = life_stages)

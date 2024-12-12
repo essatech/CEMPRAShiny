@@ -9,7 +9,7 @@ module_scenario_csc_ui <- function(id) {
   # Single action button to call modal
   actionButton(
     ns("open_scenario_csc"),
-    tags$b("Scenarios"),
+    tags$b("Across scenarios"),
     class = "chart-line clean-button",
     width = "100%"
   )

@@ -79,8 +79,10 @@ module_matrix_model_elements_ui <- function(id) {
 #' @return None
 #'
 module_matrix_model_elements_server <- function(id) {
+  
   moduleServer(id,
                function(input, output, session) {
+                 
                  ns <- session$ns
                  
                  print("matrix model elements server")
@@ -145,6 +147,7 @@ module_matrix_model_elements_server <- function(id) {
                  
                  # Compensation Ratio Sample Plot
                  output$cr_samp_plot <- renderPlot({
+                   
                    # return(expression(cr / (1 + (cr - 1) * (x / k))))
                    crf <-
                      function(CR = NA,
@@ -290,23 +293,22 @@ module_matrix_model_elements_server <- function(id) {
                    })
                    
                    # Make sure we actually have the data
-                   req(session$userData$rv_life_stages$dat)
+                   req(nrow(session$userData$rv_life_stages$dat) > 5)
+                   
+                   # Nstage must be specified before calculations can proceed
+                   req(session$userData$rv_life_stages$dat$Value[session$userData$rv_life_stages$dat$Name == "Nstage"] > 0)
                    
                    # Gather population model inputs
                    dat <- session$userData$rv_life_stages$dat
                    
+                   # Clean inputs and set to n-stage limit
+                   dat <- utility_population_dat_clean(dat)
+                   
+                   # Fix eps for non-anadromous fish
                    print("pop mod setup started...")
                    
-                   # Fix Nstage to match vector
+                   # Fix vectors to match Nstage
                    n_stage <- as.numeric(dat$Value[dat$Name == "Nstage"])
-                   surv_vec <- length(dat$Value[grepl("surv_", dat$Name)])
-                   year_vec <- length(dat$Value[grepl("year_", dat$Name)])
-                   
-                   if((surv_vec == year_vec) & (n_stage != surv_vec)) {
-                     n_stage <- surv_vec
-                     dat$Value[dat$Name == "Nstage"] <- n_stage
-                   }
-                   
                    
                    # Setup objects for population model
                    #pop_mod_setup <-
@@ -324,6 +326,7 @@ module_matrix_model_elements_server <- function(id) {
                    
                    
                    if (pop_mod_setup$possible_error_state != "All Good") {
+                     
                      print("Bad error settings")
                      session$userData$rv_ea_errors$possible_error_state <- TRUE
                      session$userData$rv_ea_errors$possible_error_msg <-
@@ -333,6 +336,8 @@ module_matrix_model_elements_server <- function(id) {
                      
                      print("Parameters ok...")
                      
+                     # pop_mod_setup$life_pars
+                     # write.csv(pop_mod_setup$life_pars, file = "TEST.csv", row.names = FALSE)
                      # Build matrix elements for population model
                      pop_mod_mat <-
                        CEMPRA::pop_model_matrix_elements(pop_mod_setup = pop_mod_setup)
@@ -351,7 +356,7 @@ module_matrix_model_elements_server <- function(id) {
                      # Simple Eigen analysis
                      ea <- popbio::eigen.analysis(A)
                      
-                     lambda <- round(ea$lambda1, 2)
+                     lambda <- round(ea$lambda1, 3)
                      damping_ratio <- round(ea$damping.ratio, 2)
                      gen_time <-
                        round(popbio::generation.time(A), 1)
@@ -444,6 +449,17 @@ module_matrix_model_elements_server <- function(id) {
                    #mnames <-
                    #   c("Stage 1", "Stage 2", "Stage 3", "Stage 4")
                    mnames <- paste("Stage ", 1:ncol(A), sep = "")
+                   
+                   # Check if population is being run in anadromous mode
+                   anadrmous <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$anadrmous
+                   
+                   if(anadrmous) {
+                     # Update stage names
+                     mnames <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$life_histories$stage_names
+                     mnames <- gsub("_", " ", mnames)
+                     mnames <- gsub("stage", "Stage", mnames)
+                   }
+                   
                    colnames(A) <- mnames
                    rownames(A) <- mnames
                    # Build the JS DT Data Table Object
@@ -475,8 +491,20 @@ module_matrix_model_elements_server <- function(id) {
                    
                    # Get the transition matrix
                    A <- (session$userData$rv_eigen_analysis$dat$ds_m)
+                   
                    # Add names to column
                    mnames <- paste("Stage ", 1:ncol(A), sep = "")
+                   
+                   # Check if population is being run in anadromous mode
+                   anadrmous <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$anadrmous
+                   
+                   if(anadrmous) {
+                     # Update stage names
+                     mnames <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$life_histories$stage_names
+                     mnames <- gsub("_", " ", mnames)
+                     mnames <- gsub("stage", "Stage", mnames)
+                   }
+                   
                    
                    colnames(A) <- mnames
                    rownames(A) <- mnames
@@ -514,6 +542,17 @@ module_matrix_model_elements_server <- function(id) {
                            3)
                    # Add names to column
                    mnames <- paste("Stage", 1:ncol(A))
+                   
+                   # Check if population is being run in anadromous mode
+                   anadrmous <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$anadrmous
+                   
+                   if(anadrmous) {
+                     # Update stage names
+                     mnames <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$life_histories$stage_names
+                     mnames <- gsub("_", " ", mnames)
+                     mnames <- gsub("stage", "Stage", mnames)
+                   }
+                   
                    colnames(A) <- mnames
                    rownames(A) <- mnames
                    # Build the JS DT Data Table Object
@@ -544,7 +583,19 @@ module_matrix_model_elements_server <- function(id) {
                    
                    A2 <-
                      round(session$userData$rv_eigen_analysis$dat$ea$sensitivities, 3)
+                   
                    mnames <- paste("Stage", 1:ncol(A2))
+                   
+                   # Check if population is being run in anadromous mode
+                   anadrmous <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$anadrmous
+                   
+                   if(anadrmous) {
+                     # Update stage names
+                     mnames <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$life_histories$stage_names
+                     mnames <- gsub("_", " ", mnames)
+                     mnames <- gsub("stage", "Stage", mnames)
+                   }
+                   
                    
                    colnames(A2) <- mnames
                    rownames(A2) <- mnames
@@ -576,7 +627,19 @@ module_matrix_model_elements_server <- function(id) {
                    
                    A3 <-
                      round(session$userData$rv_eigen_analysis$dat$ea$elasticities, 3)
+                   
                    mnames <- paste("Stage", 1:ncol(A3))
+                   
+                   # Check if population is being run in anadromous mode
+                   anadrmous <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$anadrmous
+                   
+                   if(anadrmous) {
+                     # Update stage names
+                     mnames <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$life_histories$stage_names
+                     mnames <- gsub("_", " ", mnames)
+                     mnames <- gsub("stage", "Stage", mnames)
+                   }
+                   
                    
                    colnames(A3) <- mnames
                    rownames(A3) <- mnames
@@ -613,10 +676,24 @@ module_matrix_model_elements_server <- function(id) {
                    repro <- data.frame(t(repro))
                    ss <- data.frame(t(ss))
                    repro_ss <- rbind(repro, ss)
+                   
+                   mnames <- paste("Stage", 1:length(ss))
+                   
+                   # Check if population is being run in anadromous mode
+                   anadrmous <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$anadrmous
+                   
+                   if (anadrmous) {
+                     # Update stage names
+                     mnames <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$life_histories$stage_names
+                     mnames <- gsub("_", " ", mnames)
+                     mnames <- gsub("stage", "Stage", mnames)
+                   }
+                   
                    colnames(repro_ss) <-
-                     mnames <- paste("Stage", 1:length(ss))
+                     mnames
                    rownames(repro_ss) <-
                      c("Repro. Value", "Stable Stage")
+                   
                    DT::datatable(
                      repro_ss,
                      editable =  FALSE,

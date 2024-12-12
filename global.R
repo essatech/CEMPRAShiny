@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------
 # Shiny Global Imports
 # This is the Shiny App global script
-# This file is sourced and run once when the app first loads
+# This f1ile is sourced and run once when the app first loads
 # See tutorial here: https://shiny.rstudio.com/articles/scoping.html
 # ------------------------------------------------------------------------
 
@@ -39,6 +39,8 @@ library(ggthemes)
 library(plotly)
 library(rjson)
 
+source("./R/utility_population_dat_clean.R")
+
 # Set options
 options(
   spinner.color = "#ffffff",
@@ -51,21 +53,34 @@ options(
 # options(shiny.error = browser)
 
 # Load stressor-response relationships
-file_name_stressor_response <- "./data/stressor_response_demo.xlsx"
+# file_name_stressor_response <- "./data/stressor_response_demo.xlsx"
+ file_name_stressor_response <- "./data/stressor_response_smd.xlsx"
+# file_name_stressor_response <- "./data/ns_ss_sr.xlsx"
+
 sr_wb_dat <- CEMPRA::StressorResponseWorkbook(filename = file_name_stressor_response)
 
 # Record start time
 start_time <- Sys.time()
 
 # Load stressor magnitude values associated with each HUC
-file_name_stressor_magnitude <- "./data/stressor_magnitude_demo.xlsx"
+# file_name_stressor_magnitude <- "./data/stressor_magnitude_demo.xlsx"
+ file_name_stressor_magnitude <- "./data/stressor_magnitude_smd.xlsx"
+#file_name_stressor_magnitude <- "./data/nd_ss_sm.xlsx"
+
 sm_wb_dat <- CEMPRA::StressorMagnitudeWorkbook(filename = file_name_stressor_magnitude, scenario_worksheet = 1)
 
 # Load life stages for the population model from CSV file
-life_stages <- read.csv("./data/life cycles.csv")
+life_stages <- read.csv("./data/chinook_life_cycle_profile.csv")
+# life_stages <- read.csv("./data/TEST.csv")
+#life_stages <- read.csv("./data/life cycles.csv")
+
+life_stages <- utility_population_dat_clean(dat = life_stages, nstage_fill = 10)
 
 # Load and process map geometry and map object reactive values
-hmdl <- sf::st_read("./data/watersheds.gpkg")
+# hmdl <- sf::st_read("./data/watersheds.gpkg")
+hmdl <- sf::st_read("./data/smd_locations.gpkg")
+# hmdl <- sf::st_read("./data/nd_ss_loc2.gpkg")
+
 hmdl$HUC_ID <- as.numeric(hmdl$HUC_ID)
 hmdl$uid <- paste0(hmdl$HUC_ID, "|", hmdl$NAME)
 
