@@ -10,6 +10,11 @@ module_setup_reactives <- function(session = NA) {
   # Add to userData object for session
   session$userData$rv_stressor_magnitude <- rv_stressor_magnitude
   
+  # Location select names
+  loc_sel_names <- reactiveValues(locs = NULL)
+  session$userData$loc_sel_names <- loc_sel_names
+  
+  
   # Designate the stressor response object as a reactive value
   rv_stressor_response <- reactiveValues(
     main_sheet             = sr_wb_dat$main_sheet,

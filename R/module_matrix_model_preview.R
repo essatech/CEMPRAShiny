@@ -37,8 +37,8 @@ module_matrix_model_preview_ui <- function(id) {
         actionButton(
           ns("demo_projection"),
           "Demo Projection Time Series",
-          class = "btn btn-info",
-          style = "color:white;"
+          class = "btn btn-danger",
+          style = "color:white; font-size: 20px;"
         )
       ),
     ),
@@ -47,9 +47,19 @@ module_matrix_model_preview_ui <- function(id) {
       width = 12,
       tags$div(
         class = "demo_stressors",
+        
+        tags$div(tags$h4("Stressor Magnitude Values"), style = "text-aling: center;"),
         tags$p(
           "Set hypothetical stressor values for the sample population projection preview"
         ),
+        
+        selectizeInput(
+          inputId = ns("location_dropdown"),  # User may select the location ID
+          label = "Choose a Location/Population:",  # Label for the dropdown
+          choices = NULL,  # Dropdown options
+          selected = NULL  # Default selected option (can also specify, e.g., "Option 1")
+        ),
+        
         
         # Create the stressor variable list for sandbox
         htmlOutput(ns('stressor_variable_list_pm_sandbox')),
@@ -112,7 +122,7 @@ module_matrix_model_preview_server <- function(id) {
                    for(s in 1:nrow(ms_stress)) {
                      this_stressor <- ms_stress[s, ]
                      this_stressor_name <- this_stressor$Stressors
-                     print(this_stressor$Stressors)
+                     # print(this_stressor$Stressors)
                      ms_stress_list[[s]] <- module_matrix_model_preview_stress_ui(ns(this_stressor_name))
                      module_matrix_model_preview_stress_server(this_stressor_name, stressor_variable = this_stressor)
                    }
@@ -120,6 +130,85 @@ module_matrix_model_preview_server <- function(id) {
                    
                  })
                  
+                 
+                 # ---------------------------------------------------------
+                 # Update location select dropdown
+                 # ---------------------------------------------------------
+                 observe({
+                   
+                   print("Populating location list...")
+                   req(session$userData$rv_stressor_magnitude$sm_dat)
+                   locs <- session$userData$rv_stressor_magnitude$sm_dat[, c(1,2)]
+                   colnames(locs) <- c("id", "name")
+                   loc_select <- paste0( sprintf("%02d", locs$id), " - ", locs$name)
+                   locs$label <- loc_select
+                   locs <- locs[which(!(duplicated(locs$label))), ]
+                   locs <- locs[order(locs$label), ]
+                   
+                   session$userData$loc_sel_names$locs <- locs
+                   
+                   # Update the selectize input
+                   updateSelectizeInput(
+                     session, 
+                     inputId = "location_dropdown",
+                     choices = locs$label,
+                     server = TRUE,
+                     selected = NULL
+                   )
+                   
+                 })
+                 
+                 # Updates input with JS is changed
+                 observeEvent(input$location_dropdown, {
+                   
+                   req(session$userData$rv_stressor_magnitude$sm_dat)
+                   
+                   # The new variable selected in the dropdown
+                   new_location <- input$location_dropdown
+                   
+                   req(new_location != "")
+                   
+                   print("Updating pop model stressor inputs...")
+                   
+                   # Define the prefix and suffix patterns
+                   prefix <- "matrix_model-mm_preview-"
+                   suffixes <- c("-pm_ps_val_mean", "-pm_ps_val_sd", "-pm_ps_val_lwr", "-pm_ps_val_upr")
+                   
+                   
+                   locs <- session$userData$loc_sel_names$locs
+                   loc_id <- locs$id[locs$label == new_location][1]
+                   # Get stressor values for location
+                   sm <- session$userData$rv_stressor_magnitude$sm_dat[session$userData$rv_stressor_magnitude$sm_dat$HUC_ID == loc_id, ]
+                   
+                   build_list <- list()
+                   
+                   for(m in 1:nrow(sm)) {
+                     
+                     selected_variable <- sm$Stressor[m]
+                     
+                     # Define the new IDs for the inputs
+                     new_ids <- paste0(prefix, selected_variable, suffixes)
+                     new_ids <- paste0(selected_variable, suffixes)
+                     
+                     # Named vector
+                     new_values <- list(
+                       mean = sm$Mean[m],
+                       sd = sm$SD[m],
+                       lwr = sm$Low_Limit[m],
+                       upr = sm$Up_Limit[m],
+                       check = TRUE
+                     )
+                     
+                     build_list[[selected_variable]] <- new_values
+                     
+                   }
+                   
+                   # Send the data to JavaScript
+                   session$sendCustomMessage(type = "update_pop_model_sr_inputs", message = build_list)
+                   
+                   
+                   
+                 })
                  
                  
                  
@@ -328,7 +417,6 @@ module_matrix_model_preview_server <- function(id) {
                    # Gather plot type to show: 
                    plot_type <- input$samp_plot_type
                    # stage_classes; lambda; allstage
-                   
 
                    # Get the current run
                    # (first time of is there a previous run to show)
@@ -473,10 +561,18 @@ module_matrix_model_preview_server <- function(id) {
                    pdata_2$lwr <- ifelse(is.na(pdata_2$lwr), 0, pdata_2$lwr)
                    pdata_2$lwr <- ifelse(pdata_2$lwr < 0, 0, pdata_2$lwr)
                    pdata_2$upr <- ifelse(is.na(pdata_2$upr), (mean(pdata_2$mean, na.rm = TRUE) + mean(pdata_2$sd, na.rm = TRUE)), pdata_2$upr)
-
+                   
+                   # Make sure lower and upper limits fall on the wrong side of the mean value
+                   pdata_2$upr <- ifelse(pdata_2$upr < pdata_2$mean, pdata_2$mean, pdata_2$upr)
+                   pdata_2$lwr <- ifelse(pdata_2$lwr > pdata_2$mean, pdata_2$mean, pdata_2$lwr)
+                   
                    p3 <- pdata_2
                    p3$Simulation <- "Current"
                    p3$Simulation <- ifelse(p3$sim == "one", "Current", "Previous")
+                   
+                   if(plot_type == "lambda") {
+                     my_y_min <- min(p3$lwr)
+                   }
                    
                    # Create the ggplot plotting object
                    p <-
@@ -491,7 +587,7 @@ module_matrix_model_preview_server <- function(id) {
                      ggtitle(mtitle) +
                      xlab("Simulation Year") + ylab(y_axe)
                    
-                   p <- p + geom_ribbon(data = p3, aes(ymin = lwr, ymax = upr), alpha = 0.1) + theme_bw()
+                   p <- p + geom_ribbon(data = p3, aes(ymin = lwr, ymax = upr), alpha = 0.1, colour = NA) + theme_bw()
                    
                    return(p)
 
@@ -523,11 +619,27 @@ module_matrix_model_preview_server <- function(id) {
                    n_stage <- session$userData$rv_life_stages$dat$Value[session$userData$rv_life_stages$dat$Name == "Nstage"]
                    
                    # Build checkbox input of all stage classes possible
+                   
                    opt_1 <- rev(seq(1, n_stage, by = 1))
                    stg_opt <- paste0("V", opt_1)
                    names(stg_opt) <- paste0("Stage ", opt_1)
+                   
                    # Default to select largest stage
                    stage_select <- stg_opt[[1]]
+                   
+                   # Check if population is being run in anadromous mode
+                   anadrmous <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$anadrmous
+                   
+                   if(anadrmous) {
+                     # Update stage names
+                     mnames <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$life_histories$stage_names
+                     opt_1 <- rev(seq(1, length(mnames), by = 1))
+                     stg_opt <- paste0("V", opt_1)
+                     names(stg_opt) <- rev(mnames)
+                     # Default to select largest stage
+                     stage_select <- stg_opt[[1]]
+                   }
+                   
                    
                    
                    showModal(
@@ -536,13 +648,13 @@ module_matrix_model_preview_server <- function(id) {
                        
                        tagList(
                          
-                         radioButtons(ns("samp_plot_type"), "Plot type:",
+                         radioButtons(ns("samp_plot_type"), "Plot Type:",
                                       c("Plot Stage Classes" = "stage_classes",
-                                       "Lambda" = "lambda",
-                                       "All Life Stages" = "allstage"),
+                                       "Lambda Time Series" = "lambda",
+                                       "All Life Stages at Once" = "allstage"),
                                       inline  = TRUE),
                          
-                         checkboxGroupInput(ns("samp_stages"), "Select stages to plot:",
+                         checkboxGroupInput(ns("samp_stages"), "Select stages to plot (checking more than one stage box shows the sum across stage classes):",
                                             stg_opt,
                                             selected = stage_select,
                                             inline = TRUE),

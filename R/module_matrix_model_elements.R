@@ -337,7 +337,7 @@ module_matrix_model_elements_server <- function(id) {
                      print("Parameters ok...")
                      
                      # pop_mod_setup$life_pars
-                     # write.csv(pop_mod_setup$life_pars, file = "TEST.csv", row.names = FALSE)
+                     write.csv(pop_mod_setup$life_pars, file = "TEST.csv", row.names = FALSE)
                      # Build matrix elements for population model
                      pop_mod_mat <-
                        CEMPRA::pop_model_matrix_elements(pop_mod_setup = pop_mod_setup)
