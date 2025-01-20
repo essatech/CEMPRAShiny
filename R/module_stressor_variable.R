@@ -189,6 +189,7 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
         # Increment modal refresh counter
         print("----SR MODAL OPEN ------")
+        print(stressor_index)
         
         # -------------------------------------------------------
         # If interaction matrix - show but not editable

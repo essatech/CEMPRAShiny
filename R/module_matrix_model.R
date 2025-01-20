@@ -31,6 +31,7 @@ module_matrix_model_ui <- function(id) {
               shinydashboard::box(
                 width = 12,
                 tags$div(tags$h4("Matrix Elements"), style = "text-aling: center;"),
+                module_matrix_life_cycle_diagram_ui(ns("matrix_life_cycle_diagram")),
                 module_matrix_model_elements_ui(ns("mm_elements"))
               ),
               
@@ -65,6 +66,8 @@ module_matrix_model_server <- function(id) {
                  print("Load module_matrix_model_preview_server...")
                  module_matrix_model_preview_server("mm_preview")
                  print("End load matrix inputs...")
+                 module_matrix_life_cycle_diagram_server("matrix_life_cycle_diagram")
+                 
                  
                  #-------------------------------------------------------
                  # DISABLE AND ENABLE

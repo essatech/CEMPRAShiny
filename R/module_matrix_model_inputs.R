@@ -758,7 +758,7 @@ module_matrix_model_inputs_server <- function(id) {
                        read.csv(input$up_vital2$datapath)
                      
                      print("Uploading file from csv...")
-                     life_stages <- utility_population_dat_clean(dat = life_stages, nstage_fill = 10)
+                     life_stages <- CEMPRA::pop_model_dat_clean(dat = life_stages, nstage_fill = 10)
                      
                      # Determine if anadromous
                      anadromous <- life_stages$Value[life_stages$Name == "anadromous"]
@@ -800,8 +800,8 @@ module_matrix_model_inputs_server <- function(id) {
                        1
                      
                      # Sand box stressor values
-                     session$userData$rv_sandbox_stressors$dat <-
-                       list()
+                     #session$userData$rv_sandbox_stressors$dat <-
+                     # list()
                      session$userData$rv_pop_data_huc_ts$dat <-
                        list()
                      session$userData$rv_pop_data_huc_ts$run_counter <-

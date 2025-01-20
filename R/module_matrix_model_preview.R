@@ -92,7 +92,9 @@ module_matrix_model_preview_server <- function(id) {
                  output$stressor_variable_list_pm_sandbox <- renderUI({
                    
                    print("stressor_variable_list_pm_sandbox...")
+                   
                    ms_stress <- session$userData$rv_stressor_response$main_sheet
+                   
                    # Only consider stressors applicable to Population model
                    ms_stress <- ms_stress[which(ms_stress$Model %in% c("Population Model", "All")), ]
                    
@@ -114,16 +116,18 @@ module_matrix_model_preview_server <- function(id) {
                    ms_stress$Low_Limit <- NA
                    ms_stress$Up_Limit <- NA
                    
-                   isolate({
+                   #isolate({
                      session$userData$rv_sandbox_stressors$dat <- ms_stress
-                   })
+                   #})
 
                    # Call sub modules
                    for(s in 1:nrow(ms_stress)) {
                      this_stressor <- ms_stress[s, ]
                      this_stressor_name <- this_stressor$Stressors
+                     
                      # print(this_stressor$Stressors)
                      ms_stress_list[[s]] <- module_matrix_model_preview_stress_ui(ns(this_stressor_name))
+                     
                      module_matrix_model_preview_stress_server(this_stressor_name, stressor_variable = this_stressor)
                    }
                    return(ms_stress_list)
@@ -511,7 +515,11 @@ module_matrix_model_preview_server <- function(id) {
                      pdata_1_old <- do.call("rbind", pdata_1_old)
                      pdata_1_old$sim <- "two"
                      # Merge previous and current
-                     pdata_1 <- rbind(pdata_1, pdata_1_old)
+                     if(ncol(pdata_1) == ncol(pdata_1_old)) {
+                       pdata_1 <- rbind(pdata_1, pdata_1_old)
+                     } else {
+                       print("can not join older records... columns do not match..")
+                     }
                    } else {
                      print("Run crun:")
                      print(crun)

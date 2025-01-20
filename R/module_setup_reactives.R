@@ -63,6 +63,16 @@ module_setup_reactives <- function(session = NA) {
   session$userData$rv_pop_sample_plot_data <-
     rv_pop_sample_plot_data
   
+  # Matrix population model sensitivity test
+  rv_pop_model_ltre <- reactiveValues(ltre = list())
+  session$userData$rv_pop_model_ltre <-
+    rv_pop_model_ltre
+  
+  rv_show_ltre_plot <- reactiveValues(open = FALSE)
+  session$userData$rv_show_ltre_plot <- rv_show_ltre_plot
+  
+  
+  
   # Sand box stressor values
   rv_sandbox_stressors <- reactiveValues(dat = list())
   session$userData$rv_sandbox_stressors <- rv_sandbox_stressors

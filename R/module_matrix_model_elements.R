@@ -62,6 +62,8 @@ module_matrix_model_elements_ui <- function(id) {
                  "Compensation Ratios (explainer)"
                )),
       
+      module_matrix_model_ltre_ui(ns("matrix_model_ltre"))
+      
       
     ),
     
@@ -86,7 +88,7 @@ module_matrix_model_elements_server <- function(id) {
                  ns <- session$ns
                  
                  print("matrix model elements server")
-                 
+                 module_matrix_model_ltre_server("matrix_model_ltre")
                  
                  # Copy adult k to panel
                  output$print_adult_k <- renderText({
@@ -302,7 +304,7 @@ module_matrix_model_elements_server <- function(id) {
                    dat <- session$userData$rv_life_stages$dat
                    
                    # Clean inputs and set to n-stage limit
-                   dat <- utility_population_dat_clean(dat)
+                   dat <- CEMPRA::pop_model_dat_clean(dat)
                    
                    # Fix eps for non-anadromous fish
                    print("pop mod setup started...")
@@ -337,7 +339,7 @@ module_matrix_model_elements_server <- function(id) {
                      print("Parameters ok...")
                      
                      # pop_mod_setup$life_pars
-                     write.csv(pop_mod_setup$life_pars, file = "TEST.csv", row.names = FALSE)
+                     # write.csv(pop_mod_setup$life_pars, file = "TEST.csv", row.names = FALSE)
                      # Build matrix elements for population model
                      pop_mod_mat <-
                        CEMPRA::pop_model_matrix_elements(pop_mod_setup = pop_mod_setup)
