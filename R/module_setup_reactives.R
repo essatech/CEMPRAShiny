@@ -39,6 +39,17 @@ module_setup_reactives <- function(session = NA) {
   rv_life_stages <- reactiveValues(dat = life_stages)
   session$userData$rv_life_stages <- rv_life_stages
   
+  # Habitat densities for population model
+  rv_hab_densities <- reactiveValues(dat = hab_dens)
+  session$userData$rv_hab_densities <- rv_hab_densities
+  
+  
+  # Population models saved scenarios
+  rv_pop_mod_scenarios <- reactiveValues(dat = data.frame(),
+                                         placeholder = list())
+  session$userData$rv_pop_mod_scenarios <- rv_pop_mod_scenarios
+  
+  
   # Interactive realtime eigen analysis for the population model
   rv_eigen_analysis <- reactiveValues(dat = list())
   session$userData$rv_eigen_analysis <- rv_eigen_analysis

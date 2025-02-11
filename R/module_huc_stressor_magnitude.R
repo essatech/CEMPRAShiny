@@ -224,6 +224,41 @@ module_huc_stressor_magnitude_server <- function(id) {
                      # Do not isolate this - we want function to update
                      sr_wb_dat_copy$sr_dat <- session$userData$rv_stressor_response$sr_dat
                      
+                     # Turn off stochasticity in stressor response
+                     # Only deal with non matrix interaction surfaces (for now)
+                     if(is.null(session$userData$rv_stressor_response$interaction_values)) {
+                       # Set all sd columns to zero
+                       set_sd_to_zero <- function(df_list) {
+                         lapply(df_list, function(df) {
+                           if ("sd" %in% names(df)) {
+                             df$sd <- 0
+                           } else {
+                             # Optionally, create the column if it does not exist:
+                             df$sd <- 0
+                           }
+                           if ("lwr" %in% names(df)) {
+                             df$lwr <- 0
+                           } else {
+                             # Optionally, create the column if it does not exist:
+                             df$lwr <- 0
+                           }
+                           if ("upr" %in% names(df)) {
+                             df$upr <- 100
+                           } else {
+                             # Optionally, create the column if it does not exist:
+                             df$upr <- 100
+                           }
+                           df
+                         })
+                       }
+                       sr_wb_dat_copy$sr_dat <- set_sd_to_zero(sr_wb_dat_copy$sr_dat)
+                     }
+                     
+                     # Turn off stochasticity in stressor magntiude data
+                     dr$Low_Limit <- 0
+                     dr$Up_Limit <- 100
+                     dr$SD <- 0
+                     
                      jm <- CEMPRA::JoeModel_Run(
                        dose = dr,
                        sr_wb_dat = sr_wb_dat_copy,
@@ -240,6 +275,7 @@ module_huc_stressor_magnitude_server <- function(id) {
                        sys_cap = round(jm$sc.dose.df$sys.cap * 100, 1)
                      )
                      # Group by stressor if multiple
+                     
                      var_csc <- var_csc %>% group_by(snames) %>% summarise(sys_cap = mean(sys_cap, na.rm = TRUE))
                      # Update reactive placeholder value
                      session$userData$rv_clickedIds_csc$var_csc <- var_csc
@@ -258,6 +294,7 @@ module_huc_stressor_magnitude_server <- function(id) {
                    
                    # Get values if single HUC or set as NA if multi
                    if (length(selected_ids) == 1) {
+                     
                      # Use render DT with proxy to avoid reload on edit...
                      raw_data <- session$userData$rv_stressor_magnitude$sm_dat
                      table_vals <- raw_data %>% filter(HUC_ID == selected_ids)
@@ -338,11 +375,11 @@ module_huc_stressor_magnitude_server <- function(id) {
 
                    # Build the JS DT Data Table Object
                    DT::datatable(
+                     selection = "none",
                      table_vals,
                      # The Stressor column is not editable
                      editable = list(target = "cell", disable = list(columns = c(0, 6))),
                      filter = "none",
-                     selection = "single",
                      rownames = FALSE,
                      class = "cell-border stripe",
                      options = list(

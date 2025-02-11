@@ -16,3 +16,13 @@ pretty_print_seconds <- function(x) {
   }
   return(etime)
 }
+
+convert_k_columns <- function(df) {
+  # Find all column names that start with "k_"
+  k_cols <- grep("^k_", names(df), value = TRUE)
+  # Loop over the identified columns and convert them
+  for (col in k_cols) {
+    df[[col]] <- as.numeric(as.character(df[[col]]))
+  }
+  return(df)
+}

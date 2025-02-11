@@ -41,13 +41,13 @@ module_huc_results_ui <- function(id) {
         subtitle = "Run the Cumulative Effects Joe Model"
       ),
       
-      infoBox(
-        title = NULL,
-        color = 'blue',
-        value = module_joe_vs_population_ui(ns("module_joe_vs_population")),
-        icon = icon("chart-line"),
-        subtitle = "Run the population model for selected watersheds"
-      ),
+      # infoBox(
+      #   title = NULL,
+      #   color = 'blue',
+      #   value = module_joe_vs_population_ui(ns("module_joe_vs_population")),
+      #   icon = icon("chart-line"),
+      #   subtitle = "Run the population model for selected watersheds"
+      # ),
       
       
     ),
@@ -57,7 +57,7 @@ module_huc_results_ui <- function(id) {
     
     div(id = ns("sys_cap_buttons_all"),
         
-        fluidRow(tags$h4("System Capacity Plots")),
+        fluidRow(tags$h4("Results: Joe Model Summaries")),
         
         fluidRow(
           
@@ -138,7 +138,7 @@ module_huc_results_server <- function(id) {
                  module_joe_model_csc_plots_server("joe_model_csc_plots_all")
                  module_scenario_csc_server("scenario_csc")
                  module_joe_model_csc_plots_selected_server("open_joe_modal_csc_plots_selected")
-                 module_joe_vs_population_server("module_joe_vs_population")
+                 #module_joe_vs_population_server("module_joe_vs_population")
                  
                  # Hide deselect HUC deselect button on initial load
                  # Also assume no watersheds are selected

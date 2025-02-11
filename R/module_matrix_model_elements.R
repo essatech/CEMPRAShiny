@@ -26,33 +26,17 @@ module_matrix_model_elements_ui <- function(id) {
       tags$br(),
       
       tags$div(class = "lam_bb",
-               actionButton(ns("eigen_analysis"), "Eigen Analysis"))
+               actionButton(
+                 ns("model_component"), "Symbolic Matrix Representation"
+               )),
+      
+      tags$div(class = "lam_bb",
+               actionButton(ns("eigen_analysis"), "Projection Matrix & Eigen Analysis"))
       
     ),
     
     shinydashboard::box(
       width = 12,
-      
-      tags$b("Density-Dependent Components", style = "text-align: center;"),
-      
-      tags$table(
-        class = "",
-        style = "width: 100%;",
-        tags$tr(
-          tags$td("Adult K", style = "vertical-align: middle;"),
-          tags$td(textOutput(ns("print_adult_k")), class = "pm-cell-values")
-        ),
-      ),
-      
-      tags$br(),
-      
-      tags$b("Model Components", style = "text-align: center;"),
-      
-      tags$div(class = "lam_bb",
-               actionButton(
-                 ns("model_component"), "Symbolic Representations"
-               )),
-      
       
       tags$b("Compensation Ratios", style = "text-align: center;"),
       

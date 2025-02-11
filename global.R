@@ -75,6 +75,11 @@ life_stages <- read.csv("./data/nicola_pop/chinook_life_cycle_profile.csv")
 
 life_stages <- CEMPRA::pop_model_dat_clean(dat = life_stages, nstage_fill = 10)
 
+# Load habitat densities from CSV file
+hab_dens <- read.csv("./data/nicola_pop/habitat_densities.csv")
+hab_dens <- CEMPRA::pop_model_hab_dens_clean(hab_dens = hab_dens)
+
+
 # Load and process map geometry and map object reactive values
 # hmdl <- sf::st_read("./data/watersheds.gpkg")
 hmdl <- sf::st_read("./data/nicola_pop/locations.gpkg")
@@ -91,7 +96,8 @@ bbox <- st_bbox(hmdl)
 bbox_global <- bbox
 
 # Configure color function for System Capacity Choropleth Map
-color_func <- colorQuantile(c("#f22300", "#e0af00", "#ebcc2a", "#79b7c5", "#3b9ab2"), domain = c(0, 100), na.color = "lightgrey", n = 8)
+col_seq <- c("#f22300", "#e0af00", "#ebcc2a", "#79b7c5", "#3b9ab2")
+color_func <- colorQuantile(col_seq, domain = c(0, 100), na.color = "lightgrey", n = 8)
 
 # Generate legend
 leg_col <- lapply(c(0, 20, 40, 60, 80, 100), color_func) %>% unlist()

@@ -270,8 +270,9 @@ module_import_server <- function(id) {
                        FALSE
                      session$userData$rv_show_pop_main_plot$open <-
                        FALSE
-                     session$userData$rv_sandbox_stressors$dat <-
-                       list()
+                     
+                     print("Triggering rv_sandbox_stressors$dat flush at with sr data...")
+                     session$userData$rv_sandbox_stressors$dat <- list()
                      
                      # Clear out sample plot data
                      # session$userData$rv_show_sample_plot$open <- FALSE
@@ -307,6 +308,7 @@ module_import_server <- function(id) {
                  #--------------------------------------
                  # Stressor Magnitude Workbook Data
                  observe({
+                   
                    # Require the file
                    req(input$up_sm_wb_dat)
                    
@@ -378,8 +380,9 @@ module_import_server <- function(id) {
                        FALSE
                      session$userData$rv_show_pop_main_plot$open <-
                        FALSE
-                     session$userData$rv_sandbox_stressors$dat <-
-                       list()
+                     
+                     print("Triggering rv_sandbox_stressors$dat flush at sm data...")
+                     session$userData$rv_sandbox_stressors$dat <- list()
                      
                      # Clear out sample plot data
                      # session$userData$rv_show_sample_plot$open <- FALSE
@@ -414,6 +417,7 @@ module_import_server <- function(id) {
                  #--------------------------------------
                  # Watershed Polygon Upload
                  observe({
+                   
                    # Require the file
                    req(input$up_sheds)
                    
@@ -597,8 +601,9 @@ module_import_server <- function(id) {
                        FALSE
                      session$userData$rv_show_pop_main_plot$open <-
                        FALSE
-                     session$userData$rv_sandbox_stressors$dat <-
-                       list()
+                     
+                     print("Triggering rv_sandbox_stressors$dat flush at with spatial data...")
+                     session$userData$rv_sandbox_stressors$dat <- list()
                      
                      # Clear out sample plot data
                      # session$userData$rv_show_sample_plot$open <- FALSE

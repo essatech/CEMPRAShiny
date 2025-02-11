@@ -23,6 +23,8 @@ module_main_map_ui <- function(id) {
                                   
                                   # Main leaflet output with variable width and fixed height
                                   leafletOutput(ns("mainmap"), height = 550),
+                                  
+                                  
                                   fluidRow(column(width = 12,
                                                   module_huc_results_ui(
                                                     ns("huc_results")
@@ -95,6 +97,7 @@ module_main_map_server <- function(id) {
                    session$userData$rv_stressor_response$hover_values <-
                      input$hover_values
                  })
+                 
                  
                  
                  # --------------------------------------
@@ -622,12 +625,6 @@ module_main_map_server <- function(id) {
                  })
                  
                  
-                 
-                 
-                 
-                 
-                 
-                 
                  # ------------------------------------------------------
                  # User clicks on System Capacity Map plot
                  # ------------------------------------------------------
@@ -663,5 +660,6 @@ module_main_map_server <- function(id) {
                    #  q_code <- paste0("jQuery('#main_map-var_id').addClass('var-selected');")
                    # shinyjs::runjs(code = q_code)
                  })
+                 
                })
 }

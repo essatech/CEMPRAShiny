@@ -22,7 +22,7 @@ module_matrix_model_ui <- function(id) {
               width = 8,
               shinydashboard::box(
                 width = 12,
-                tags$h3("Population Model Inputs (vital rates)"),
+                tags$h4("Population Model Input Files"),
                 module_matrix_model_inputs_ui(ns("mm_inputs"))
               ),
             ),

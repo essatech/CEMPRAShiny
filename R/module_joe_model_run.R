@@ -107,19 +107,79 @@ module_joe_model_run_server <- function(id) {
               )
             ),
 
-            fluidRow(
+            fluidRow(column(
+              width = 8,
               shinydashboard::box(
-                width = 8,
-                numericInput(ns("number_of_simulations"), "Number of Simulations", MC.sims, min = 1, max = 1000),
+                width = 12,
+                numericInput(
+                  ns("number_of_simulations"),
+                  "Number of Simulations",
+                  MC.sims,
+                  min = 1,
+                  max = 1000
+                ),
                 textInput(ns("name_of_simulation"), "Name of this Scenario", "Default"),
                 uiOutput(ns("text_time_estimate"))
               ),
-              shinydashboard::box(
-                width = 4,
-                div("(Optional) Run with socio-economic inputs representing restoration action"),
-                checkboxInput(ns("run_with_se_inputs"), "Run with Socio-Economic Inputs", value = FALSE)
-              )
             ),
+            column(
+              width = 4,
+              shinydashboard::box(
+                width = 12,
+                selectInput(
+                  ns("weight"),
+                  "Weight Results:",
+                  list(
+                    `Unweighted` = "Unweighted",
+                    `Weighted` = "Weighted Score",
+                    `Product (habitat density)` = "Product"
+                  )
+                ),
+                selectInput(
+                  ns("weight_var"),
+                  "By (Variable):",
+                  list(
+                    `Habitat` = "Habitat",
+                    `Geometry` = "Geometry",
+                    `Product` = "Proihduct",
+                    `Habitat1` = "Habijitat",
+                    `Geometr1y` = "Genjometry",
+                    `Produc1t` = "Prnoduct",
+                    `Habita2t` = "Hanbjitat",
+                    `Geomet3ry` = "Geometry",
+                    `Produc3t` = "Prolduct",
+                    `Habit4at` = "Habitat",
+                    `Geomet5ry` = "Gejjormetry",
+                    `Produ6ct` = "Prfoduct",
+                    `Habita7t` = "Hadfbitat",
+                    `Geom0etry` = "Geaometry",
+                    `Produ0ct` = "Proaduct",
+                    `Habit-at` = "Habaitat",
+                    `Geometry` = "Geometry",
+                    `Pr0oduct` = "Proaofduct",
+                    `Ha0bitat` = "Habaitat",
+                    `Geometry` = "Geaaolmetry",
+                    `Prsoduct` = "Product",
+                    `Ha0bitat` = "Hazbitat",
+                    `Geodmetry` = "Gezometry",
+                    `Prosduct` = "Prodlduct"
+                  )
+                ),
+                div(
+                  "(Optional) weight results or report results as a product of habitat cap * SR score."
+                ),
+              ),
+            )), fluidRow(column(width = 12, shinydashboard::box(
+              width = 12,
+                div(
+                  "(Optional) Run with socio-economic inputs representing restoration action"
+                ),
+                checkboxInput(
+                  ns("run_with_se_inputs"),
+                  "Run with Socio-Economic Inputs",
+                  value = FALSE
+                )
+            ))),
 
             fluidRow(
               column(

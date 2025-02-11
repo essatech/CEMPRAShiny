@@ -22,7 +22,8 @@ module_matrix_model_ltre_ui <- function(id) {
         ))
       ),
       
-      actionButton(ns("ltre_projection"), "Run Sensitivity Test", class = "btn lam_bb")
+      actionButton(ns("ltre_projection"), "Run Sensitivity Test on Productivity", class = "btn btn-danger",
+                   style = "color:white;")
     )
   )
 }
@@ -70,14 +71,11 @@ module_matrix_model_ltre_server <- function(id) {
               if(names(CE_df)[1] == "Mean") {
                 print("data preview error")
                 CE_df <- data.frame()
-                browser()
+                #browser()
               }
             }
           }
         }
-        
-
-        
         
         
         if (length(CE_df) == 0) {

@@ -81,25 +81,9 @@ module_matrix_model_preview_stress_server <-
     moduleServer(id,
                  function(input, output, session) {
                    ns <- session$ns
+                   
                    print("module_matrix_model_preview_stress_server...")
                    print(stressor_variable)
-                   
-                   
-                   # Include stressor module here.
-                   # output$stressor_variable_button <- renderUI({
-                   #   
-                   #   this_stressor <- stressor_variable$Stressors[1]
-                   #   snames <- session$userData$rv_stressor_response$stressor_names
-                   #   s_index <- which(this_stressor == snames)
-                   #   
-                   #   if(length(s_index) == 1) {
-                   #     module_stressor_variable_server(this_stressor, stressor_index = s_index)
-                   #     module_stressor_variable_ui(ns(this_stressor))
-                   #   }
-                   #   
-                   # 
-                   # })
-                   
                    
                    simp_num <- function(value) {
                      if(is.null(value)) {
@@ -121,7 +105,9 @@ module_matrix_model_preview_stress_server <-
                    
                    # Turn validation on and off
                    observeEvent(input$pm_ps_check, {
-                     #print(input$pm_ps_check)
+                     
+                     # print("Stressor sandbox checkbox clicked...")
+                     
                      if(input$pm_ps_check) {
                        # only show red errors if checked
                        iv$enable()
@@ -135,7 +121,6 @@ module_matrix_model_preview_stress_server <-
                    # Set the label
                    output$pm_ps_label <- renderUI({
                      
-                     #print("Variable Label")
                      param_note <-
                        paste0(stressor_variable$Life_stages,
                               ": ",
@@ -161,11 +146,9 @@ module_matrix_model_preview_stress_server <-
                      req(input$pm_ps_val_upr)
                      
                      
-                     print("Update stressor value in matrix...")
-                     # browser()
+                     #print("Update stressor value in matrix...")
+                     #print(as.data.frame(session$userData$rv_sandbox_stressors$dat$Mean))
                      
-                     
-                     #isolate({
                        
                        # Update values in reference object
                        this_stressor <- stressor_variable$Stressors
@@ -180,8 +163,6 @@ module_matrix_model_preview_stress_server <-
                        
                        #print(as.data.frame(session$userData$rv_sandbox_stressors$dat))
                        
-                     #})
-                     
                      
                    })
                    
