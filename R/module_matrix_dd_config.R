@@ -9,9 +9,6 @@ module_matrix_dd_config_ui <- function(id) {
   ns <- NS(id)
   tagList(
     
-    shinydashboard::box(
-      width = 12,
-    
     tags$h4("Define Density Dependence Bottlenecks: with life stage-specific carrying capacity"),
     shinyjs::useShinyjs(),  # Include shinyjs
     fluidRow(
@@ -48,7 +45,7 @@ module_matrix_dd_config_ui <- function(id) {
         span(textOutput(ns("concatenated_summary")), style="color:darkgreen; font-weight:bold; font-size:14;")
       )
     )
-  ))
+  )
 }
 
 #' Density Dependence Function Configuration Server Module

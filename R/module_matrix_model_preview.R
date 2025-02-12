@@ -894,7 +894,7 @@ module_matrix_model_preview_server <- function(id) {
                          numericInput(
                            ns("samp_burn_in"),
                            "Exclude Burn-in Years:",
-                           value = 0,
+                           value = 10,
                            min = 0,
                            max = 100,
                            step = 1
@@ -906,10 +906,10 @@ module_matrix_model_preview_server <- function(id) {
                          tags$br(),
                          
                          fluidRow(column(6, textInput(
-                           ns("scenario_name"), "Scenario Name", value = "01_Baseline"
+                           ns("scenario_name"), "Current scenario Name", value = "01_Baseline"
                          )), column(
                            3,
-                           tags$p("Save current view"),
+                           tags$p("Save current scenario"),
                            actionButton(
                              ns("save_scenario"),
                              "Save Scenario Data",

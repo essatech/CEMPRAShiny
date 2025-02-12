@@ -11,19 +11,22 @@ model_matrix_overview_ui <- function(id) {
       "Navigate through the following tab panels (blue text above) to adjust the survival, growth, reproduction, and density dependant constraints on the life cycle model. Life cycle model vital rate files can be edited here, exported (on the Download Data tab), and then re-uploaded in the file upload inputs (at the top of this page). Make sure the number of life stages is correct for your target species. Also, determine whether the life cycle should follow an anadromous life history (e.g., for salmon) or non-anadromous life history (e.g., for trout and other organisms that can reproduce more than once in their life cycle)."
     ),
     
-    tags$p(
-      "We recommend starting with one of the pre-developed sample life cycle profile files (listed below) and then modifying values to adapt the life history profile to your target study system. Alternatively, you can create a new life history profile from scratch here by defining the number of life stages and then editing inputs across the survivorship, growth, and fecundity tabs. Please consult the guidance document to ensure that you are interpreting inputs correctly."
-    ),
-    
-    tags$h4("Scenarios"),
+    tags$h4("Scenario Results"),
     
     # Button to clear scenario data
     actionButton(ns("clearScenario"), "Clear scenario data"),
+    
+    # Wrap the tableOutput in a div with center alignment
+    div(style = "text-align: center;",
+        tableOutput(ns("scenarioSummary"))
+    ),
+    
+    tags$br(),
+    
     # The interactive plot output
     plotlyOutput(ns("scenarioPlot")),
     
-    # The summary table of scenarios (median, q10, q90)
-    tableOutput(ns("scenarioSummary"))
+
     
     
     # tags$table(
@@ -139,9 +142,11 @@ model_matrix_overview_server <- function(id) {
       # Create the violin plot.
       # The geom_boxplot uses outlier.shape = NA so that outlier markers are not displayed.
       p <- ggplot(scenario_data, aes(x = scenario_name, y = N)) +
-        geom_violin(trim = FALSE,
-                    fill = "skyblue",
-                    color = "black") +
+        
+        # geom_violin(trim = FALSE,
+        #             fill = "skyblue",
+        #             color = "black") +
+        
         geom_boxplot(
           width = 0.1,
           fill = "white",
@@ -166,6 +171,7 @@ model_matrix_overview_server <- function(id) {
     output$scenarioSummary <- renderTable({
       # Retrieve scenario data
       scenario_data <- session$userData$rv_pop_mod_scenarios$dat
+      
       if (is.null(scenario_data) || nrow(scenario_data) == 0) {
         return(NULL)
       }
@@ -175,26 +181,16 @@ model_matrix_overview_server <- function(id) {
       # Compute summary statistics for each scenario after excluding outliers.
       # Outliers are defined as values outside [Q1 - 1.5*IQR, Q3 + 1.5*IQR].
       # We then compute the median, 10th, and 90th percentiles of the filtered data.
-      library(dplyr)
       scenario_summary <- scenario_data %>%
         group_by(scenario_name) %>%
         summarize(
-          Q1 = quantile(N, 0.25, na.rm = TRUE),
-          Q3 = quantile(N, 0.75, na.rm = TRUE),
-          IQR = Q3 - Q1,
-          lower_bound = Q1 - 1.5 * IQR,
-          upper_bound = Q3 + 1.5 * IQR,
-          filtered = list(N[N >= lower_bound & N <= upper_bound])
-        ) %>%
-        rowwise() %>%
-        mutate(
-          median = median(filtered[[1]], na.rm = TRUE),
-          q10 = quantile(filtered[[1]], 0.10, na.rm = TRUE),
-          q90 = quantile(filtered[[1]], 0.90, na.rm = TRUE)
-        ) %>%
-        ungroup() %>%
-        select(scenario_name, median, q10, q90) %>%
-        mutate(across(c(median, q10, q90), ~ round(.x, 0)))
+          Median = round(median(N, na.rm = TRUE), 0),
+          Mean = round(mean(N, na.rm = TRUE), 0),
+          p10 = round(quantile(N, 0.10, na.rm = TRUE), 0),
+          p90 = round(quantile(N, 0.90, na.rm = TRUE), 0),
+          Min = round(min(N, 0.10, na.rm = TRUE), 0),
+          Max = round(max(N, 0.90, na.rm = TRUE), 0))
+      
       
       # Optionally, force "01_Baseline" to appear first.
       if ("01_Baseline" %in% scenario_summary$scenario_name) {
@@ -206,7 +202,7 @@ model_matrix_overview_server <- function(id) {
       }
       
       scenario_summary
-    })
+    }, digits = 0)
     
     
     
