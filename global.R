@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------
 # Shiny Global Imports
 # This is the Shiny App global script
-# This f1ile is sourced and run once when the app first loads
+# This file is sourced and run once when the app first loads
 # See tutorial here: https://shiny.rstudio.com/articles/scoping.html
 # ------------------------------------------------------------------------
 
@@ -13,6 +13,8 @@ rm(list = ls())
 library(CEMPRA) # Download instructions: https://github.com/essatech/CEMPRA/
 
 # Load other libraries from CRAN
+library(shinyBS)
+library(bslib)
 library(dplyr)
 library(readxl)
 library(writexl)
@@ -40,6 +42,7 @@ library(plotly)
 library(rjson)
 library(DiagrammeR)
 
+
 # Set options
 options(
   spinner.color = "#ffffff",
@@ -47,6 +50,10 @@ options(
   spinner.size = 3,
   shiny.maxRequestSize = 32 * 1024 ^ 2 # Increase file upload size limit to 32MB
 )
+
+
+junk_hist <- read.csv("./data/delete_this.csv")
+
 
 # TODO: Remove for deployment - pause on error
 # options(shiny.error = browser)
@@ -56,6 +63,8 @@ options(
 # file_name_stressor_response <- "./data/nicola_pop/stressor_response.xlsx"
 # file_name_stressor_response <- "./data/ns_ss_sr.xlsx"
 file_name_stressor_response <- "./data/nanaimo/Stressor_Response.xlsx"
+#file_name_stressor_response <- "./data/parkinson_2016/Stressor_Response_Parkinson_2016.xlsx"
+
 
 sr_wb_dat <- CEMPRA::StressorResponseWorkbook(filename = file_name_stressor_response)
 
@@ -66,9 +75,11 @@ start_time <- Sys.time()
 # file_name_stressor_magnitude <- "./data/stressor_magnitude_demo.xlsx"
 # file_name_stressor_magnitude <- "./data/nicola_pop/stressor_magnitude.xlsx"
 # file_name_stressor_magnitude <- "./data/nd_ss_sm.xlsx"
+#file_name_stressor_magnitude <- "./data/parkinson_2016/Stressor_Magnitude_Parkinson_2016.xlsx"
 file_name_stressor_magnitude <- "./data/nanaimo/Stressor_Magnitude.xlsx"
 
 sm_wb_dat <- CEMPRA::StressorMagnitudeWorkbook(filename = file_name_stressor_magnitude, scenario_worksheet = 1)
+
 
 # Load life stages for the population model from CSV file
 # life_stages <- read.csv("./data/nicola_pop/chinook_life_cycle_profile.csv")
@@ -86,12 +97,21 @@ hab_dens <- read.csv("./data/nanaimo/Habitat_Capacities.csv")
 hab_dens <- CEMPRA::pop_model_hab_dens_clean(hab_dens = hab_dens)
 
 
+
 # Load and process map geometry and map object reactive values
 # hmdl <- sf::st_read("./data/watersheds.gpkg")
 # hmdl <- sf::st_read("./data/nicola_pop/locations.gpkg")
 # hmdl <- sf::st_read("./data/nd_ss_loc2.gpkg")
 hmdl <- sf::st_read("./data/nanaimo/reaches_populations.gpkg")
+# hmdl <- sf::st_read("./data/parkinson_2016/Locations_Parkinson_2016.gpkg")
 
+if(!("HUC_ID" %in% colnames(hmdl))){
+  # set the values in the first column to HUC_ID
+  # but be aware that object is of class sf
+  ntmp <- hmdl
+  st_geometry(ntmp) <- NULL
+  hmdl$HUC_ID <- as.numeric(ntmp[, 1])
+}
 
 hmdl$HUC_ID <- as.numeric(hmdl$HUC_ID)
 hmdl$uid <- paste0(hmdl$HUC_ID, "|", hmdl$NAME)

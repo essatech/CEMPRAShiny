@@ -255,38 +255,169 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
           showModal(modalDialog(
             title = paste0("Stressor-Response Relationship: ", this_var_pretty),
             tagList(
-              tags$p("Use the table below to edit and adjust the stressor-response (dose-response) relationship. Click on cells in the table to adjust values. The graph shows the dose:response relationship between the raw stressor values (x-axis) and the stressor-response score (or mean system capacity, y-axis). The red line shows the mean value, and the shading represents uncertainty or stochasticity in the relationship. The red shading represents one standard deviation, and the grey shading represents the upper and lower bounds of min and max values. Click and drag within the graph window to zoom in on particular trends; double-click the graph to zoom out to full view."),
-              tags$b(textOutput(ns("text_preview"))),
+              
+              fluidRow(shinydashboard::box(
+                width = 12,
+                
+                tags$p("Adjust how the stressor-response relationship is linked to the focal species/systems. The following inputs are sourced from the Main worksheet of the Stressor-Response workbook. Adjust the following dropdowns to control min/max interactions, change the functional form, the model endpoint (Population Model vs Joe Model), and vital rate linkages (if associated with the Population Model).", class = "small-helper-text"),
+                
+                
+                fluidRow(
+                  column(
+                    width = 3,
+                    selectInput(
+                      ns("s_Interaction"),
+                      "Interactions:",
+                      c(
+                        "NA" = NA,
+                        "Minimum" = "Minimum",
+                        "Maximum" = "Maximum"
+                      )
+                    ),
+                    bsTooltip(
+                      id = ns("s_Interaction"),
+                      title = "Choose whether to use the minimum or maximum interaction rule",
+                      placement = "top",
+                      trigger = "hover"
+                    ),
+                    
+                    class = "grouped-box-1"
+                  ),
+                  column(
+                    width = 3,
+                    selectInput(
+                      ns("s_Linked"),
+                      "Interaction (Linked) Groups:",
+                      c(
+                        "NA" = NA,
+                        "A" = "A",
+                        "B" = "B",
+                        "C" = "C",
+                        "D" = "D",
+                        "E" = "E"
+                      )
+                    ),
+                    class = "grouped-box-1"
+                  ),
+                  
+                  column(
+                    width = 3,
+                    selectInput(
+                      ns("s_Function"),
+                      "Function Type:",
+                      c("continuous" = "continuous", "step" = "step")
+                    ),
+                    class = "grouped-box-2"
+                  ),
+                  
+                  column(
+                    width = 3,
+                    selectInput(
+                      ns("s_Stress_Scale"),
+                      "Raw Stressor Scale:",
+                      c("linear" = "linear", "log" = "log")
+                    ),
+                    class = "grouped-box-2"
+                  )
+                ),
+                
+                fluidRow(
+                  column(
+                    width = 3,
+                    selectInput(
+                      ns("s_Model"),
+                      "Model Endpoint:",
+                      c(
+                        "All" = "All",
+                        "Joe Model" = "Joe Model",
+                        "Population Model" = "Population Model"
+                      )
+                    ),
+                    class = "grouped-box-4"
+                  ),
+                  column(
+                    width = 3,
+                    selectInput(
+                      ns("s_Life_stages"),
+                      "Life Stages (Pop. Only):",
+                      c("..." = "...", "other..." = "other...")
+                    ),
+                    class = "grouped-box-3"
+                  ),
+                  column(
+                    width = 3,
+                    selectInput(
+                      ns("s_Parameters"),
+                      "Vital Rate Parameters (Pop. Only):",
+                      c(
+                        "survival" = "survival",
+                        "capacity" = "capacity",
+                        "fecundity" = "fecundity"
+                      )
+                    ),
+                    class = "grouped-box-3"
+                  ),
+                  column(
+                    width = 3,
+                    textInput(ns("s_Units"), "Raw Stressor Units:", value = "units"),
+                    class = "grouped-box-4"
+                  )
+                ),
+                
+              )), 
+              
+              
+              
+              
               fluidRow(
                 shinydashboard::box(
                   width = 12,
+                  
+                  tags$p("Use the table below to edit and adjust the stressor-response (dose-response) relationship. Click on cells in the table to adjust values. The graph shows the dose:response relationship between the raw stressor values (x-axis) and the stressor-response score (or mean system capacity, y-axis). The red line shows the mean value, and the shading represents uncertainty or stochasticity in the relationship. The red shading represents one standard deviation, and the grey shading represents the upper and lower bounds of min and max values. Click and drag within the graph window to zoom in on particular trends; double-click the graph to zoom out to full view.", class = "small-helper-text"),
+                  
                   dygraphOutput(ns("dose_response_plot"))
                 )
               ),
               fluidRow(
                 shinydashboard::box(
                   width = 12,
-                  tags$p("Edit the underlying Stressor-Response Relationship. Double-click a cell to edit its value. Remember the SD, Lower Limit, and Upper Limit define stochasticity and uncertainty of the response score for a given level of a stressor."),
-                  DTOutput(
-                    ns("stressor_response_dt")
+                  
+                  navset_card_underline(
+                    nav_panel(
+                      "Stressor-Response Input Data",
+                      
+                      tagList(
+                        tags$p(
+                          "Edit the underlying Stressor-Response Relationship. Double-click a cell to edit its value. Remember the SD, Lower Limit, and Upper Limit define stochasticity and uncertainty of the response score for a given level of a stressor. Do not forget to click the green save button at the bottom before closing the tab.",
+                          class = "small-helper-text"
+                        ),
+                        DTOutput(ns("stressor_response_dt"))
+                      )
+                    ),
+                    
+                    nav_panel("Raw Distribution", tagList(fluidRow(
+                      column(
+                        width = 12,
+                        tags$b("Distribution of Raw Stressor Values:"),
+                        tags$p(textOutput(ns("text_preview"))),
+                        plotOutput(ns("hist_vals_plot")),
+                      )
+                      
+                    ))), 
+                    
+                    nav_panel("Correlated Stressors", tagList("...")),
+                    nav_panel("Location SR Scores", tagList("..."))
+                    
                   ),
+                  
                   actionButton(
-                    ns("close_sr_modal"), 
-                    label = tagList(icon("save"), "Save SR Function Updates and Close Module"), 
+                    ns("close_sr_modal"),
+                    label = tagList(icon("save"), "Save SR Function Updates and Close Module"),
                     style = "margin: 15px; color: white;",
                     class = "btn btn-success"
                   )
                 )
-              ),
-              
-              fluidRow(
-                shinydashboard::box(
-                  width = 12,
-                  tags$p("Distribution of values"),
-                  plotOutput(
-                    ns("hist_vals_plot")
-                  ),
-                ))
+              )
             ),
             easyClose = TRUE,
             size = "l",
@@ -318,7 +449,24 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
       # Add table data as data table
       # This is the doese response relationship for each stressor
       output$stressor_response_dt <- renderDT({
-
+        
+        
+        print("pause here...")
+        #browser()
+        
+        names(session$userData$rv_stressor_response)
+        session$userData$rv_stressor_response$interaction_names
+        session$userData$rv_stressor_response$active_layer
+        session$userData$rv_stressor_response$main_sheet
+        
+        # Get the associated data from the main sheet
+        m_sheet <- session$userData$rv_stressor_response$main_sheet[session$userData$rv_stressor_response$main_sheet$Stressors == session$userData$rv_stressor_response$active_layer, ]
+        
+        
+        
+        
+        
+        
         # Do not run on app load
         req(session$userData$rv_stressor_response$active_layer)
         
@@ -347,7 +495,7 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
             "SD of Resp. (0-100)" = "sd", "Lower Limit of Resp. (0)" = "lwr", "Upper Limit of Resp. (100)" = "upr"
           ),
           filter = "none",
-          selection = "single",
+          selection = "none",
           rownames = FALSE,
           class = "cell-border stripe",
           options = list(
@@ -516,20 +664,58 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
         table_vals <- table_vals[, c("value", "mean_system_capacity", "lwr", "upr", "lwr_sd", "upr_sd")]
 
         # Pretty label for plot
-        pretty_lab <- gsub("_", " ", paste0("Stressor-Response curve for ", this_var))
+        pretty_lab <- gsub("_", " ", paste0("Stressor-Response Curve for ", this_var))
 
         # X-axis mouse-over formatting
         myvFormatter <- "function formatValue(v) {
               var prefix = 'Raw Stressor: ';
               return prefix + String(v);
         }"
+        
+        # Get additional stressor attributes
+        
+        # Create the x-axis label for the plot
+        m_ms <- session$userData$rv_stressor_response$main_sheet
+        m_ms <- m_ms[m_ms$Stressors == this_var, ]
+        m_units <- m_ms$Units
+        m_units <- ifelse(length(m_units) == 0, "", m_units)
+        m_units <- ifelse(is.na(m_units), "", m_units)
+        m_name <- gsub("_", " ", this_var)
+        if(m_units != "") {
+          m_name <- paste0(m_name, " (", m_units, ")")
+        }
+        xlab_plot <- paste0("Raw Stressor Magnitude Values: ", m_name)
 
+        # Create the y-axis label for the plot
+        m_ls <- m_ms$Life_stages
+        m_ls <- ifelse(length(m_ls) == 0, "", m_ls)
+        m_ls <- ifelse(is.na(m_ls), "", m_ls)
+        m_param <- m_ms$Parameters
+        m_param <- ifelse(length(m_param) == 0, "", m_param)
+        m_param <- ifelse(is.na(m_param), "", m_param)
+        m_name <- ": ("
+        if(m_ls != "") {
+          m_name <- paste0(m_name, "", m_ls)
+        }
+        if(m_param != "") {
+          if(m_ls != "") {
+            m_name <- paste0(m_name, " ", m_param)
+          } else {
+            m_name <- paste0(m_name, "", m_param)
+          }
+        }
+        m_name <- paste0(m_name, ")")
+        if(m_name == ": ()") {
+          m_name <- ""
+        }
+        ylab_plot <- paste0("Stressor Response Score (%)", m_name)
+        
         # Start and return the dygraph plot
         dygraph(table_vals, main = pretty_lab) %>%
-          dyAxis("x", label = "Raw Stressor Magnitude Values", valueFormatter = JS(myvFormatter)) %>%
-          dyAxis("y", label = "Scaled Stressor Response Score (%)") %>%
+          dyAxis("x", label = xlab_plot, valueFormatter = JS(myvFormatter)) %>%
+          dyAxis("y", label = ylab_plot) %>%
           dySeries(c("lwr", "mean_system_capacity", "upr"), label = "msc", color = "grey") %>%
-          dySeries(c("lwr_sd", "mean_system_capacity", "upr_sd"), label = "Mean Sys. Cap.", color = "red")
+          dySeries(c("lwr_sd", "mean_system_capacity", "upr_sd"), label = "Response ", color = "red")
         
       })
       
@@ -539,8 +725,11 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
 
       #------------------------------------------------------------------------
+      #------------------------------------------------------------------------
       # render 2-factor interaction matrix table
       #------------------------------------------------------------------------
+      #------------------------------------------------------------------------
+      
       output$interaction_matrix_main <- DT::renderDataTable({
           print("Rendering matrix intraction table...")
           this_var <- session$userData$rv_stressor_response$interaction_names[stressor_index - length(session$userData$rv_stressor_response$stressor_names)]

@@ -63,9 +63,9 @@ ui <- dashboardPage(
       tabItem("tab_matrix_model",
               module_matrix_model_ui("matrix_model")
       ),
-      #tabItem("tab_stressor_sandbox",
-      #  tags$p("tab_stressor_sandbox")
-      #),
+      tabItem("tab_stressor_sandbox",
+        module_sr_creation_ui("sr_creation")
+      ),
       tabItem("tab_socio_economic",
               module_socio_economic_ui("socio_economic")
       ),

@@ -29,7 +29,7 @@ module_huc_results_ui <- function(id) {
         color = 'blue',
         value = module_huc_stressor_magnitude_ui(ns("stressor_magnitude")),
         icon = icon("sliders-h"),
-        subtitle = "Adjust stressor magnitude values for selected watersheds"
+        subtitle = "1. Adjust stressor magnitude values for selected watersheds"
       ),
       
       
@@ -37,8 +37,16 @@ module_huc_results_ui <- function(id) {
         title = NULL,
         color = 'blue',
         value = module_joe_model_run_ui(ns("run_joe_model")),
-        icon = icon("chart-bar"),
-        subtitle = "Run the Cumulative Effects Joe Model"
+        icon = icon("play"),
+        subtitle = "2. Run (and re-run) the Cumulative Effects Joe Model"
+      ),
+      
+      infoBox(
+        title = NULL,
+        color = 'blue',
+        value = module_scenario_csc_ui(ns("scenario_csc")),
+        icon = icon("chart-simple"),
+        subtitle = "3. Review and compare results across scenarios"
       ),
       
       # infoBox(
@@ -92,14 +100,6 @@ module_huc_results_ui <- function(id) {
             value = module_joe_model_csc_plots_ui(ns("joe_model_csc_plots_all")),
             icon = icon("sliders-h"),
             subtitle = "Plot the cumulative system capacity for all locations"
-          ),
-          
-          infoBox(
-            title = NULL,
-            color = 'blue',
-            value = module_scenario_csc_ui(ns("scenario_csc")),
-            icon = icon("sliders-h"),
-            subtitle = "Cumulative system capacity across scenarios"
           ),
           
           

@@ -15,6 +15,7 @@ server <- function(input, output, session) {
   
   # Call main module server functions
   module_main_map_server("main_map")
+  module_sr_creation_server("sr_creation")
   module_stressor_variable_server("stressor_variable")
   module_matrix_model_server("matrix_model")
   module_export_server("export")

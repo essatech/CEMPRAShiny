@@ -38,13 +38,13 @@ module_main_map_ui <- function(id) {
                                     tags$div(
                                       class = "stack-box section-heading",
                                       style = "padding-left: 15px;",
-                                      tags$b("Stressors Variables"),
+                                      tags$b("Stressor-Response Relationships"),
                                       checkboxInput(
                                         ns("hover_values"),
                                         "Show raw values on mouse hover (slow)",
                                         FALSE
                                       ),
-                                      module_all_sr_curves_ui(ns("all_sr_curves"))
+                                      module_all_sr_curves_ui(ns("all_sr_curves")),
                                     ),
                                     tags$div(
                                       class = "stack-box csc-box map-variable hide-this",
@@ -64,6 +64,9 @@ module_main_map_ui <- function(id) {
                                     
                                     # Create the stressor variable sidebar list
                                     htmlOutput(ns("stressor_variable_list")),
+                                    
+                                    
+                                    tags$p("Select a stressor to display on the map or click the chart icon to edit details.", class = "small-helper-text"),
                                   ),
                                 ),
                               )) # End of main box

@@ -9,7 +9,7 @@ module_scenario_csc_ui <- function(id) {
   # Single action button to call modal
   actionButton(
     ns("open_scenario_csc"),
-    tags$b("Across scenarios"),
+    tags$b("Scenario Results"),
     class = "chart-line clean-button",
     width = "100%"
   )
@@ -65,8 +65,7 @@ module_scenario_csc_server <- function(id) {
                                                column(
                                                  width = 12,
                                                  tags$p(
-                                                   "Each time the Joe Model is run, a new “scenario” is created in this tab. A scenario can consist of changes to the stressor magnitude data, changes to the stressor-response data, or changes in the composition of variables included in the Joe Model run. For example, hypothetical “restoration action scenario” might include changes to the stressor magnitude variables at one or more locations to represent some possible intervention. A hypothetical future climate change scenario might increase the severity of temperature-related stressors. Other scenarios might include sensitivity tests that run the Joe Model under different assumptions about the relationship between the cumulative system capacity and one or more stressors. The idea is to either upload new input data or make changes in the app to create “new scenarios”. The Joe Model is then re-run for each scenario, and users review the overall change in the system capacity scores. Be sure to provide a unique name for each scenario for ease of reference. See the “Name of this Simulation” option in the Joe Model Run tab."
-                                                 ),
+                                                   "Each time the Joe Model is run, a new “scenario” is created in this tab. A scenario can consist of changes to the stressor magnitude data, changes to the stressor-response data, or changes in the composition of variables included in the Joe Model run. For example, hypothetical “restoration action scenario” might include changes to the stressor magnitude variables at one or more locations to represent some possible intervention. A hypothetical future climate change scenario might increase the severity of temperature-related stressors. Other scenarios might include sensitivity tests that run the Joe Model under different assumptions about the relationship between the cumulative system capacity and one or more stressors. The idea is to either upload new input data or make changes in the app to create “new scenarios”. The Joe Model is then re-run for each scenario, and users review the overall change in the system capacity scores. Be sure to provide a unique name for each scenario for ease of reference. See the “Name of this Simulation” option in the Joe Model Run tab.", class = "small-helper-text"),
                                                  # Action button
                                                  fluidRow(column(
                                                    width = 12,
@@ -74,22 +73,41 @@ module_scenario_csc_server <- function(id) {
                                                      actionButton(
                                                        ns("clear_button"),
                                                        "Clear data from previous scenarios for new comparison set"
-                                                     ),
-                                                     tags$br(),
+                                                     )
                                                    )
                                                  )),
                                                  
+                                                 tags$br(),
+                                                 
                                                  # Weightings
-                                                 fluidRow(column(
-                                                   width = 12,
+                                                 fluidRow(
+                                                   column(
+                                                     width = 3,
+                                                     selectInput(ns("weighting_type"), "Product or Weight:",
+                                                                 c("Unweighted Mean (%)" = "Unweighted Mean (%)",
+                                                                   "Weighted Mean (%)" = "Weighted Mean (%)",
+                                                                   "Product (custom)" = "Product (custom)")),
+                                                   ),
+                                                   column(
+                                                   width = 5,
                                                    selectInput(ns("location_weighting"), "Weight Location Scores By:",
                                                                c("Equal Weight Per Location" = "equal",
                                                                  "By Area (geometry)" = "area",
                                                                  "By Length (geometry)" = "length",
-                                                                 "User Attribute: Rearing_area" = "area1",
-                                                                 "User Attribute: Spawning_area" = "area2",
-                                                                 "Gears" = "gear")),
-                                                   )
+                                                                 "Estuary_Survival" = "Estuary_Survival",
+                                                                 "Fines" = "Fines",
+                                                                 "Fry_Capacity" = "Fry_Capacity",
+                                                                 "Spawn_Capacity" = "Spawn_Capacity",
+                                                                 "Spawn_Gravel" = "Spawn_Gravel",
+                                                                 "Spawm_Temp_Eggs" = "Spawm_Temp_Eggs",
+                                                                 "Spawm_Temp_Fry" = "Spawm_Temp_Fry",
+                                                                 "Stream_Temp_Prespawn" = "Stream_Temp_Prespawn",
+                                                                 "Wood_Abund_Fry" = "Wood_Abund_Fry")),
+                                                   ),
+                                                   column(
+                                                     width = 4,
+                                                     textInput(ns("custom_y_lab"), "Y-axis Label (New Units):", value = "Cumulative System Capacity (%)")
+                                                   ),
                                                  ),
                                                  
                                                  fluidRow(column(plotlyOutput(
@@ -98,8 +116,7 @@ module_scenario_csc_server <- function(id) {
                                                  
                                                  fluidRow(column(
                                                    tags$p(
-                                                     "The next set of plots shows each stressor's average system capacity score across each scenario. Only the mean value is shown (across locations) for convenience rather than the full distribution of each stressor. However, reviewing the plot below is useful for understanding the most critical and least critical stressors across scenarios."
-                                                   ),
+                                                     "The next set of plots shows each stressor's average system capacity score across each scenario. Only the mean value is shown (across locations) for convenience rather than the full distribution of each stressor. However, reviewing the plot below is useful for understanding the most critical and least critical stressors across scenarios.", class = "small-helper-text"),
                                                    width = 12
                                                  )),
                                                  fluidRow(column(plotlyOutput(
