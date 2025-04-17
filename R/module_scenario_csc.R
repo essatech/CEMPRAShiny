@@ -55,6 +55,15 @@ module_scenario_csc_server <- function(id) {
                  # Display the scenario tab
                  observeEvent(input$open_scenario_csc, {
                    print("Joe model form click to open ...")
+                   
+                   
+                   # Populate select input with stressor options
+                   updateSelectInput(
+                     session,
+                     "location_weighting",
+                     choices = sort(unique(session$userData$rv_stressor_magnitude$sm_dat$Stressor))
+                   )
+                   
                    # Gather a list of all the stessors to build the checkbox list
                    showModal(
                      modalDialog(
@@ -91,18 +100,7 @@ module_scenario_csc_server <- function(id) {
                                                    column(
                                                    width = 5,
                                                    selectInput(ns("location_weighting"), "Weight Location Scores By:",
-                                                               c("Equal Weight Per Location" = "equal",
-                                                                 "By Area (geometry)" = "area",
-                                                                 "By Length (geometry)" = "length",
-                                                                 "Estuary_Survival" = "Estuary_Survival",
-                                                                 "Fines" = "Fines",
-                                                                 "Fry_Capacity" = "Fry_Capacity",
-                                                                 "Spawn_Capacity" = "Spawn_Capacity",
-                                                                 "Spawn_Gravel" = "Spawn_Gravel",
-                                                                 "Spawm_Temp_Eggs" = "Spawm_Temp_Eggs",
-                                                                 "Spawm_Temp_Fry" = "Spawm_Temp_Fry",
-                                                                 "Stream_Temp_Prespawn" = "Stream_Temp_Prespawn",
-                                                                 "Wood_Abund_Fry" = "Wood_Abund_Fry")),
+                                                               choices = NULL),
                                                    ),
                                                    column(
                                                      width = 4,
@@ -140,12 +138,13 @@ module_scenario_csc_server <- function(id) {
                  # Generate plot for all life stages here (& lambda)...
                  # ---------------------------------------------
                  output$scenario_boxplots <- renderPlotly({
+                   
                    print("render scenario_boxplots...")
                    
                    jm_data <-
                      session$userData$rv_joe_model_results_scenarios$sims
                    
-                   if (length(jm_data) == 0) {
+                   if(length(jm_data) == 0) {
                      print("Empty data...")
                      p <- ggplot(data.frame())
                      return(p)
@@ -162,15 +161,112 @@ module_scenario_csc_server <- function(id) {
                    all_dat <- do.call("rbind", all_dat)
                    all_dat$scenario_name <-
                      as.character(all_dat$scenario_name)
-                   all_dat$CE <-
-                     round(as.numeric(all_dat$CE * 100), 2)
                    
-                   # Create the plot
-                   p <-
-                     ggplot(all_dat, aes(x = scenario_name, y = CE)) +
-                     geom_boxplot() +
-                     ggtitle("Cumulative System Capacity by Scenario") +
-                     xlab("Scenario Names") + ylab("Cumulative System Capacity (%)")
+                   # Add the MCMC batch replicate to the data
+                   add_batch_id <- function(df) {
+                     df %>%
+                       group_by(HUC, scenario_name) %>%
+                       mutate(batch_id = row_number()) %>%
+                       ungroup()
+                   }
+                   
+                   all_dat <- add_batch_id(all_dat)
+                   
+                   # Get options from select inputs
+                   location_weighting <- input$location_weighting
+                   # Product or weight
+                   weighting_type <- input$weighting_type
+                   # Y-axis label
+                   y_lab <- input$custom_y_lab
+                   
+                   # ==========================================================
+                   # If working with a simple unweighted mean
+                   # ==========================================================
+                   if(length(weighting_type) == 0) {
+                     weighting_type <- "Unweighted Mean (%)"
+                   }
+                   if(is.na(weighting_type)) {
+                     weighting_type <- "Unweighted Mean (%)"
+                   }
+                   if(weighting_type == "Unweighted Mean (%)") {
+                     # session$userData$rv_stressor_response$stressor_names 
+                     
+                     if (length(jm_data) == 0) {
+                       print("Empty data...")
+                       p <- ggplot(data.frame())
+                       return(p)
+                     }
+                     
+                     all_dat$CE <-
+                       round(as.numeric(all_dat$CE * 100), 2)
+                     
+                     # Group by location
+                     m2 <- all_dat %>% group_by(scenario_name, batch_id) %>%
+                       summarise(CE = mean(CE, na.rm = TRUE)) %>%
+                       mutate(scenario_name = factor(scenario_name, levels = unique(scenario_name)))
+                     
+                     # Create the plot
+                     p <-
+                       ggplot(m2, aes(x = scenario_name, y = CE)) +
+                       geom_boxplot() +
+                       ggtitle("Cumulative System Capacity by Scenario") +
+                       xlab("Scenario Names") + ylab("Cumulative System Capacity (%)")
+                   }
+                   
+                   # ==========================================================
+                   # If working with a weighted mean or product
+                   # ==========================================================
+                   if(weighting_type != "Unweighted Mean (%)") {
+                     
+                     print("alt weighting_type selected...")
+                     
+                     # Get the associated stressor magntiude data
+                     sm_data <- session$userData$rv_stressor_magnitude$sm_dat
+                     
+                     # Determine if target metric is available
+                     sm_data <- sm_data[sm_data$Stressor == location_weighting, ]
+                     
+                     if(nrow(sm_data) > 0) {
+                       sm_data <- sm_data[, c("HUC_ID", "Mean")]
+                       all_dat <- merge(all_dat, sm_data, by.x = "HUC", by.y = "HUC_ID", all.x = TRUE, all.y = FALSE)
+                       # Drop any NA values
+                       all_dat <- all_dat[!is.na(all_dat$Mean), ]
+                       
+                       # Calculate weighted mean and product
+                       if(weighting_type == "Weighted Mean (%)") {
+                         # Create a weighted mean for each combination of batch_id and scenario_name.
+                         # use CE for mean and Mean for weights
+                         m2 <- all_dat %>% group_by(scenario_name, batch_id) %>%
+                           summarise(CE_adj = weighted.mean(CE, w = Mean, na.rm = TRUE)) %>%
+                           mutate(scenario_name = factor(scenario_name, levels = unique(scenario_name)))
+                       }
+                       # and product
+                       if(weighting_type == "Product (custom)") {
+                         
+                         all_dat$product_calc <- all_dat$CE * all_dat$Mean
+                         
+                         # Create a weighted mean for each combination of batch_id and scenario_name.
+                         # use CE for mean and Mean for weights
+                         m2 <- all_dat %>% group_by(scenario_name, batch_id) %>%
+                           summarise(CE_adj = sum(product_calc, na.rm = TRUE)) %>%
+                           mutate(scenario_name = factor(scenario_name, levels = unique(scenario_name)))
+                         
+                       }
+                       
+                       # Create the plot
+                       p <-
+                         ggplot(m2, aes(x = scenario_name, y = CE_adj)) +
+                         geom_boxplot() +
+                         ggtitle(y_lab) +
+                         xlab("Scenario Names") + ylab(y_lab)
+                       
+                     } else {
+                       # No matching stressor magntidue data
+                       print("Empty data...")
+                       p <- ggplot(data.frame())
+                       return(p)
+                     }
+                   } # end of alt summary method
                    
                    return(p)
                    
@@ -178,6 +274,7 @@ module_scenario_csc_server <- function(id) {
                  
                  
                  output$scenario_stressor_dotplots <- renderPlotly({
+                   
                    print("render scenario_stressor_dotplots...")
                    
                    jm_data <-
@@ -198,19 +295,126 @@ module_scenario_csc_server <- function(id) {
                    all_dat <- do.call("rbind", all_dat)
                    all_dat$scenario_name <-
                      as.character(all_dat$scenario_name)
-                   all_dat$m.sys.cap <-
-                     round(as.numeric(all_dat$m.sys.cap * 100), 2)
                    
-                   p <-
-                     ggplot(all_dat,
-                            aes(x = scenario_name,
-                                y = m.sys.cap,
-                                color = Stressor)) +
-                     geom_point() +
-                     #geom_dotplot(binaxis = 'y', stackdir = 'center') +
-                     ggtitle("System Capacity by Stressor by Scenario") +
-                     xlab("Scenario Names") + ylab("Mean System Capacity (%)") +
-                     theme(legend.position = "bottom")
+                   # Get options from select inputs
+                   location_weighting <- input$location_weighting
+                   # Product or weight
+                   weighting_type <- input$weighting_type
+                   # Y-axis label
+                   y_lab <- input$custom_y_lab
+                   
+                   # ==========================================================
+                   # If working with a simple unweighted mean
+                   # ==========================================================
+                   if(length(weighting_type) == 0) {
+                     weighting_type <- "Unweighted Mean (%)"
+                   }
+                   if(is.na(weighting_type)) {
+                     weighting_type <- "Unweighted Mean (%)"
+                   }
+                   if(weighting_type == "Unweighted Mean (%)") {
+                     # session$userData$rv_stressor_response$stressor_names 
+                     
+                     if (length(jm_data) == 0) {
+                       print("Empty data...")
+                       p <- ggplot(data.frame())
+                       return(p)
+                     }
+                     
+                     all_dat$CE <-
+                       round(as.numeric(all_dat$m.sys.cap * 100), 2)
+                     
+                     # Group by location
+                     m2 <- all_dat %>% group_by(scenario_name, Stressor) %>%
+                       summarise(CE = mean(CE, na.rm = TRUE)) %>%
+                       mutate(scenario_name = factor(scenario_name, levels = unique(scenario_name)))
+                     
+                     # Create the plot
+                     p <-
+                       ggplot(m2, aes(x = scenario_name, y = CE)) +
+                       geom_boxplot() +
+                       ggtitle("Cumulative System Capacity by Scenario") +
+                       xlab("Scenario Names") + ylab("Cumulative System Capacity (%)")
+                     
+                     p <-
+                       ggplot(m2,
+                              aes(x = scenario_name,
+                                  y = CE,
+                                  color = Stressor)) +
+                       geom_point() +
+                       geom_line() +
+                       #geom_dotplot(binaxis = 'y', stackdir = 'center') +
+                       ggtitle("System Capacity by Stressor by Scenario") +
+                       xlab("Scenario Names") + ylab("Mean System Capacity (%)") +
+                       theme(legend.position = "bottom")
+                     
+                   }
+                   
+                   # ==========================================================
+                   # If working with a weighted mean or product
+                   # ==========================================================
+                   if(weighting_type != "Unweighted Mean (%)") {
+                     
+                     print("alt weighting_type selected...")
+                     
+                     # Get the associated stressor magntiude data
+                     sm_data <- session$userData$rv_stressor_magnitude$sm_dat
+                     
+                     # Determine if target metric is available
+                     sm_data <- sm_data[sm_data$Stressor == location_weighting, ]
+                     
+                     if(nrow(sm_data) > 0) {
+                       sm_data <- sm_data[, c("HUC_ID", "Mean")]
+                       all_dat <- merge(all_dat, sm_data, by.x = "HUC", by.y = "HUC_ID", all.x = TRUE, all.y = FALSE)
+                       # Drop any NA values
+                       all_dat <- all_dat[!is.na(all_dat$Mean), ]
+                       
+                       # Calculate weighted mean and product
+                       if(weighting_type == "Weighted Mean (%)") {
+                         # Create a weighted mean for each combination of batch_id and scenario_name.
+                         # use CE for mean and Mean for weights
+                        
+                         all_dat$CE <- as.numeric(all_dat$m.sys.cap)
+                         
+                         m2 <- all_dat %>% group_by(scenario_name, Stressor) %>%
+                           summarise(CE_adj = weighted.mean(CE, w = Mean, na.rm = TRUE)) %>%
+                           mutate(scenario_name = factor(scenario_name, levels = unique(scenario_name)))
+                       }
+                       # and product
+                       if(weighting_type == "Product (custom)") {
+                         
+                         all_dat$CE <- as.numeric(all_dat$m.sys.cap)
+                         
+                         all_dat$product_calc <- all_dat$CE * all_dat$Mean
+                         
+                         # Create a weighted mean for each combination of batch_id and scenario_name.
+                         # use CE for mean and Mean for weights
+                         m2 <- all_dat %>% group_by(scenario_name, Stressor) %>%
+                           summarise(CE_adj = sum(product_calc, na.rm = TRUE)) %>%
+                           mutate(scenario_name = factor(scenario_name, levels = unique(scenario_name)))
+                         
+                       }
+                       
+                       # Create the plot
+                       p <-
+                         ggplot(m2,
+                                aes(x = scenario_name,
+                                    y = CE_adj,
+                                    color = Stressor)) +
+                         geom_point() +
+                         geom_line() +
+                         #geom_dotplot(binaxis = 'y', stackdir = 'center') +
+                         ggtitle(y_lab) +
+                         xlab("Scenario Names") + ylab(y_lab) +
+                         theme(legend.position = "bottom")
+                       
+                     } else {
+                       # No matching stressor magntidue data
+                       print("Empty data...")
+                       p <- ggplot(data.frame())
+                       return(p)
+                     }
+                   } # end of alt summary method
                    
                    return(p)
                    

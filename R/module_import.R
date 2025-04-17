@@ -194,6 +194,8 @@ module_import_server <- function(id) {
                    # Require the file
                    req(input$up_sr_wb_dat)
                    
+                   print("SR Workbook Data...")
+                   
                    upload_ok <- FALSE
                    
                    # Run import function in a try catch
@@ -323,6 +325,8 @@ module_import_server <- function(id) {
                        return(NULL)
                      }
                      
+                     print("Loading SM workbook...")
+                     
                      # Extract the stressor response relationships
                      sm_wb_dat <-
                        CEMPRA::StressorMagnitudeWorkbook(
@@ -423,6 +427,8 @@ module_import_server <- function(id) {
                    
                    upload_ok <- FALSE
                    
+                   print("Loading spatial data...")
+                   
                    # Run import function in a try catch
                    # to avoid app crashing on upload errors
                    
@@ -464,6 +470,7 @@ module_import_server <- function(id) {
                      # Fix col names - if needed
                      cnames <- colnames(hmdl)
                      
+                     # Force the addition of a HUC_ID column
                      if (!("HUC_ID" %in% cnames)) {
                        
                        # if("id" %in% tolower(colnames(cnames)) {
@@ -475,7 +482,9 @@ module_import_server <- function(id) {
                        use_id <-
                          which(grepl("id", tolower(cnames)))[1]
                        hmdl$HUC_ID <- hmdl[[use_id]]
+                       
                      }
+                     
                      if (!("NAME" %in% cnames)) {
                        print("NAME not in col names...")
                        use_name <-
@@ -496,6 +505,9 @@ module_import_server <- function(id) {
                      if (st_crs(hmdl)$epsg != 4326) {
                        hmdl <- sf::st_transform(hmdl, 4326)
                      }
+                     
+                     # Drop any polygons with no ID or NA values for HUC_ID
+                     # hmdl <- hmdl[!is.na(hmdl$HUC_ID), ]
                      
                      # Check if polygon IDs are matched in
                      # stressor magnitude file.

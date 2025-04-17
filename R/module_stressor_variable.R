@@ -450,10 +450,6 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
       # This is the doese response relationship for each stressor
       output$stressor_response_dt <- renderDT({
         
-        
-        print("pause here...")
-        #browser()
-        
         names(session$userData$rv_stressor_response)
         session$userData$rv_stressor_response$interaction_names
         session$userData$rv_stressor_response$active_layer
@@ -461,11 +457,6 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
         
         # Get the associated data from the main sheet
         m_sheet <- session$userData$rv_stressor_response$main_sheet[session$userData$rv_stressor_response$main_sheet$Stressors == session$userData$rv_stressor_response$active_layer, ]
-        
-        
-        
-        
-        
         
         # Do not run on app load
         req(session$userData$rv_stressor_response$active_layer)

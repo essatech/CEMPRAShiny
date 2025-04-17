@@ -20,7 +20,7 @@ module_export_ui <- function(id) {
                                   width = 6,
                                   tags$div(
                                     tags$p(
-                                      "Choose from the following files to export. Note that in some scenarios it may be more convenient to download the stressor-magnitude and stressor-response Excel workbooks and then edit inputs for scenarios offline in Excel or other software. Users can then reupload the revised dataset and continue running new scenarios."
+                                      "Choose from the following files to export. In some scenarios it may be more convenient to download the stressor-magnitude and stressor-response Excel workbooks and then edit inputs for scenarios offline in Excel or other software. Users can then reupload the revised dataset and continue running new scenarios."
                                     )
                                   ),
                                   
@@ -112,20 +112,19 @@ module_export_server <- function(id) {
                    },
                    content = function(file) {
                      # Gather sheets
-                     main <-
-                       isolate(session$userData$rv_stressor_response$main_sheet)
+                     print("Downloading SR Workbook...")
+                     
+                     main <- session$userData$rv_stressor_response$main_sheet
                      sheet_list <- list()
                      sheet_list$Main <- main
                      
                      # Loop through other variables
-                     sr_names <-
-                       isolate(names(session$userData$rv_stressor_response$sr_dat))
+                     sr_names <- names(session$userData$rv_stressor_response$sr_dat)
                      
                      counter <- 2 # because main is first sheet
                      for (i in 1:length(sr_names)) {
                        this_name <- sr_names[i]
-                       this_dat <-
-                         isolate(session$userData$rv_stressor_response$sr_dat[this_name])
+                       this_dat <- session$userData$rv_stressor_response$sr_dat[this_name]
                        fix_dat <- this_dat[[1]]
                        colnames(fix_dat) <-
                          c(this_name,

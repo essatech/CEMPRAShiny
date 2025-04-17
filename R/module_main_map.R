@@ -91,6 +91,10 @@ module_main_map_server <- function(id) {
                function(input, output, session) {
                  ns <- session$ns
                  
+                 # Create a list of stressor IDs that have already been registered
+                 rv_registered_stressors <- reactiveValues(registered = NULL)
+                 
+                 
                  # Call sub module for HUC results
                  module_huc_results_server("huc_results")
                  module_all_sr_curves_server("all_sr_curves")
@@ -511,44 +515,30 @@ module_main_map_server <- function(id) {
                  # ---------------------------------------------------------
                  # Define the stressor variables to plot div button side bar
                  # ---------------------------------------------------------
+                 # 1) a single uiOutput that just rebuilds all of the boxes
                  output$stressor_variable_list <- renderUI({
-                   print("Re-populating stressor variables...")
-                   snames <-
-                     session$userData$rv_stressor_response$stressor_names
-                   pnames <- session$userData$rv_stressor_response$pretty_names
-                   svar_list <- list()
+                   req(session$userData$rv_stressor_response$stressor_names)
+                   snames <- session$userData$rv_stressor_response$stressor_names
                    
-                   # Check if there are any matrix interaction variables
-                   var_id <- 1
+                   # wrap them in a container so we know where they live
+                   tags$div(id = ns("stressor_list_container"),
+                            lapply(snames, function(s) {
+                              # for each stressor name, call the UI function with its namespace
+                              module_stressor_variable_ui(ns(s))
+                            })
+                   )
+                 })
+                 
+                 # 2) separately, whenever the list of stressors changes, register exactly
+                 #    one moduleServer() per new ID, **outside** of renderUI().
+                 observeEvent(session$userData$rv_stressor_response$stressor_names, {
+                   snames <- session$userData$rv_stressor_response$stressor_names
                    
-                   # Call sub modules
-                   for (s in 1:length(snames)) {
-                     this_stressor <- snames[s]
-                     print(this_stressor)
-                     svar_list[[s]] <-
-                       module_stressor_variable_ui(ns(this_stressor))
-                     
-                     module_stressor_variable_server(this_stressor, stressor_index = s)
-                     var_id <-
-                       var_id + 1 # Use this index for the matrix interactions (if any)
-                   }
-                   
-                   # Call sub modules to create matrix button
-                   mnames <-
-                     session$userData$rv_stressor_response$interaction_names
-                   if (!(is.null(mnames))) {
-                     for (m in 1:length(mnames)) {
-                       this_interaction <- mnames[m]
-                       print("Rendering matrix interaction...")
-                       print(this_interaction)
-                       svar_list[[var_id]] <-
-                         module_stressor_variable_ui(ns(this_interaction))
-                       module_stressor_variable_server(this_interaction, stressor_index = var_id)
-                       var_id <- var_id + 1
-                     }
-                   }
-                   
-                   return(svar_list)
+                   lapply(seq_along(snames), function(i) {
+                     # this will call module_stressor_variable_server() exactly once
+                     # for each `snames[i]`, and tie it to the UI you just created above
+                     module_stressor_variable_server(snames[i], stressor_index = i)
+                   })
                  })
                  
                  

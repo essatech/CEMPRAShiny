@@ -14,6 +14,9 @@ module_setup_reactives <- function(session = NA) {
   loc_sel_names <- reactiveValues(locs = NULL)
   session$userData$loc_sel_names <- loc_sel_names
   
+  # Stressor List Regeneration Counter
+  session$userData$rv_stressor_list_regen_count <- reactiveValues(count = 0)
+  
   
   # Designate the stressor response object as a reactive value
   rv_stressor_response <- reactiveValues(
@@ -111,7 +114,8 @@ module_setup_reactives <- function(session = NA) {
     # Legend color to display
     leg_lab = NA,
     # Legend label to display
-    color_df = NA                 # Color reference data frame
+    color_df = NA,  # Color reference data frame for main map
+    color_df2 = NA  # Color reference data frame for formula map
   )
   session$userData$rv_HUC_geom <- rv_HUC_geom
   

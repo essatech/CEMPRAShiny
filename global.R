@@ -41,6 +41,7 @@ library(ggthemes)
 library(plotly)
 library(rjson)
 library(DiagrammeR)
+library(rhandsontable)
 
 
 # Set options
@@ -76,7 +77,7 @@ start_time <- Sys.time()
 # file_name_stressor_magnitude <- "./data/nicola_pop/stressor_magnitude.xlsx"
 # file_name_stressor_magnitude <- "./data/nd_ss_sm.xlsx"
 #file_name_stressor_magnitude <- "./data/parkinson_2016/Stressor_Magnitude_Parkinson_2016.xlsx"
-file_name_stressor_magnitude <- "./data/nanaimo/Stressor_Magnitude.xlsx"
+file_name_stressor_magnitude <- "./data/nanaimo/Stressor_Magnitude_wd.xlsx"
 
 sm_wb_dat <- CEMPRA::StressorMagnitudeWorkbook(filename = file_name_stressor_magnitude, scenario_worksheet = 1)
 

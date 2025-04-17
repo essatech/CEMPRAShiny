@@ -108,7 +108,7 @@ module_joe_model_run_server <- function(id) {
             ),
 
             fluidRow(column(
-              width = 8,
+              width = 12,
               shinydashboard::box(
                 width = 12,
                 numericInput(
@@ -120,54 +120,6 @@ module_joe_model_run_server <- function(id) {
                 ),
                 textInput(ns("name_of_simulation"), "Name of this Scenario", "Default"),
                 uiOutput(ns("text_time_estimate"))
-              ),
-            ),
-            column(
-              width = 4,
-              shinydashboard::box(
-                width = 12,
-                selectInput(
-                  ns("weight"),
-                  "Weight Results:",
-                  list(
-                    `Unweighted` = "Unweighted",
-                    `Weighted` = "Weighted Score",
-                    `Product (habitat density)` = "Product"
-                  )
-                ),
-                selectInput(
-                  ns("weight_var"),
-                  "By (Variable):",
-                  list(
-                    `Habitat` = "Habitat",
-                    `Geometry` = "Geometry",
-                    `Product` = "Proihduct",
-                    `Habitat1` = "Habijitat",
-                    `Geometr1y` = "Genjometry",
-                    `Produc1t` = "Prnoduct",
-                    `Habita2t` = "Hanbjitat",
-                    `Geomet3ry` = "Geometry",
-                    `Produc3t` = "Prolduct",
-                    `Habit4at` = "Habitat",
-                    `Geomet5ry` = "Gejjormetry",
-                    `Produ6ct` = "Prfoduct",
-                    `Habita7t` = "Hadfbitat",
-                    `Geom0etry` = "Geaometry",
-                    `Produ0ct` = "Proaduct",
-                    `Habit-at` = "Habaitat",
-                    `Geometry` = "Geometry",
-                    `Pr0oduct` = "Proaofduct",
-                    `Ha0bitat` = "Habaitat",
-                    `Geometry` = "Geaaolmetry",
-                    `Prsoduct` = "Product",
-                    `Ha0bitat` = "Hazbitat",
-                    `Geodmetry` = "Gezometry",
-                    `Prosduct` = "Prodlduct"
-                  )
-                ),
-                div(
-                  "(Optional) weight results or report results as a product of habitat cap * SR score."
-                ),
               ),
             )), fluidRow(column(width = 12, shinydashboard::box(
               width = 12,
@@ -444,7 +396,6 @@ module_joe_model_run_server <- function(id) {
               socioeconomic_inputs = socioeconomic_inputs
           )
           
-          
           print("Finished the Joe Model run...")
           
           # Store the scenario in the list object - index + 1 to prevent overwrite
@@ -462,9 +413,11 @@ module_joe_model_run_server <- function(id) {
           jm$ce.df$CE <- round(jm$ce.df$CE, 4)
           jm$ce.df$simulation <- NULL
           jm$ce.df$scenario_name <- sim_name
-          # Summarize variables
-          jm$sc.dose.df <- jm$sc.dose.df %>% group_by(Stressor) %>% 
+          
+          # Summarize variables across batch replicates
+          jm$sc.dose.df <- jm$sc.dose.df %>% group_by(HUC, Stressor) %>% 
             summarise(m.sys.cap = mean(sys.cap, na.rm = TRUE))
+          
           jm$sc.dose.df$scenario_name <- sim_name
           simulation_index_scenarios <- length(session$userData$rv_joe_model_results_scenarios$sims) + 1
           session$userData$rv_joe_model_results_scenarios$sims[[simulation_index_scenarios]] <- jm
