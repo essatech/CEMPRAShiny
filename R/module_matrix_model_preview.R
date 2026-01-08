@@ -378,8 +378,11 @@ module_matrix_model_preview_server <- function(id) {
       life_cycles <- isolate({
         session$userData$rv_life_stages$dat
       })
-      
-      print("RUN A SAMPLE POP PROJECTION...")
+
+      # Need fixer function that adjusts values to fit stage
+      # MJB added July 18 2025
+      n_stage_check <- life_cycles$Value[life_cycles$Name == "Nstage"]
+      life_cycles <- CEMPRA::pop_model_dat_clean(dat = life_cycles, nstage_fill = n_stage_check)
       
       p.cat <- life_cycles$Value[life_cycles$Name == "p.cat"]
       p.cat <- ifelse(length(p.cat) == 0, 0, p.cat)
@@ -397,7 +400,6 @@ module_matrix_model_preview_server <- function(id) {
       
       # Set the K.adj (K adjustment prior to pop model run)
       life_histories <- pop_mod_mat$life_histories
-      
       
       #  ===========================================================
       # Set default habitat capacity inputs
@@ -455,14 +457,16 @@ module_matrix_model_preview_server <- function(id) {
             
             # Udate K stages for density-dependent constraints
             bh_dd_s <- hab_obj$ret_bh_dd_stages
+            
             if (!(is.null(bh_dd_s))) {
               if (!(is.na(bh_dd_s[1]))) {
                 bh_dd_stages <- bh_dd_s
               }
             }
             
-            # Udate K stages for density-dependent constraints
+            # Update K stages for density-dependent constraints
             sk_over <- hab_obj$ret_stage_k_override
+            
             if (!(is.null(sk_over))) {
               if (!(is.na(sk_over[1]))) {
                 stage_k_override <- sk_over
@@ -499,10 +503,15 @@ module_matrix_model_preview_server <- function(id) {
           CE_df_rep <- CE_df[CE_df$simulation == ii, ]
         }
         
+        # If stage_k_override is NULL but bh_dd_stages is not NULL then set stage_k_override
+        if(length(stage_k_override) == 0 & length(bh_dd_stages) > 0) {
+          stage_k_override <- rep(NA, life_histories$Nstage + 1)
+        }
+        
+        
         # ----------------------------------------------------------------
         # Run simple population projection - project forward through time
         # ----------------------------------------------------------------
-        
         run_data <-
           CEMPRA::Projection_DD(
             M.mx = life_stages_symbolic,
