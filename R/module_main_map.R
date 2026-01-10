@@ -23,8 +23,47 @@ module_main_map_ui <- function(id) {
                                   
                                   # Main leaflet output with variable width and fixed height
                                   leafletOutput(ns("mainmap"), height = 550),
-                                  
-                                  
+
+                                  # Color scale breakpoints slider
+                                  tags$div(
+                                    class = "color-scale-control",
+                                    tags$div(
+                                      class = "color-scale-header",
+                                      tags$span("Legend Color Breakpoints", class = "color-scale-title"),
+                                      actionLink(ns("toggle_color_scale"),
+                                                 icon("sliders-h"),
+                                                 class = "color-scale-toggle")
+                                    ),
+                                    shinyjs::hidden(
+                                      tags$div(
+                                        id = ns("color_scale_panel"),
+                                        class = "color-scale-panel",
+                                        tags$p("Drag the handles to adjust where colors change on the map.",
+                                               class = "small-helper-text"),
+                                        noUiSliderInput(
+                                          inputId = ns("color_breaks"),
+                                          label = NULL,
+                                          min = 1,
+                                          max = 99,
+                                          value = c(20, 40, 60, 80),
+                                          step = 1,
+                                          tooltips = TRUE,
+                                          color = "#3c8dbc",
+                                          width = "100%"
+                                        ),
+                                        tags$div(
+                                          class = "color-scale-labels",
+                                          tags$span("0", class = "scale-label-left"),
+                                          tags$span("System Capacity (%)", class = "scale-label-center"),
+                                          tags$span("100", class = "scale-label-right")
+                                        ),
+                                        actionButton(ns("reset_color_breaks"), "Reset to Default",
+                                                     class = "btn-sm btn-default",
+                                                     style = "margin-top: 10px;")
+                                      )
+                                    )
+                                  ),
+
                                   fluidRow(column(width = 12,
                                                   module_huc_results_ui(
                                                     ns("huc_results")
@@ -104,9 +143,78 @@ module_main_map_server <- function(id) {
                    session$userData$rv_stressor_response$hover_values <-
                      input$hover_values
                  })
-                 
-                 
-                 
+
+
+                 # --------------------------------------
+                 # Color Scale Breakpoints Controls
+                 # --------------------------------------
+
+                 # Toggle color scale panel visibility
+                 observeEvent(input$toggle_color_scale, {
+                   shinyjs::toggle("color_scale_panel")
+                 })
+
+                 # Reset color breaks to default
+                 observeEvent(input$reset_color_breaks, {
+                   updateNoUiSliderInput(
+                     session = session,
+                     inputId = "color_breaks",
+                     value = c(20, 40, 60, 80)
+                   )
+                 })
+
+                 # Reactive to generate dynamic color function and legend based on slider
+                 r_color_scale <- reactive({
+                   # Get breakpoints from slider (or use defaults)
+                   breaks <- input$color_breaks
+                   if (is.null(breaks) || length(breaks) < 4) {
+                     breaks <- c(20, 40, 60, 80)
+                   }
+
+                   # Sort breaks to ensure proper order
+                   breaks <- sort(breaks)
+
+                   # Ensure breaks are within valid range (1-99)
+                   breaks <- pmax(1, pmin(99, breaks))
+
+                   # Ensure breaks are unique (add small offset if duplicates)
+                   breaks <- unique(breaks)
+                   if (length(breaks) < 4) {
+                     breaks <- c(20, 40, 60, 80)  # Fall back to defaults
+                   }
+
+                   # Full breakpoints including 0 and 100
+                   full_breaks <- c(0, breaks, 100)
+
+                   # Color palette (red to blue, 5 colors for 5 segments)
+                   col_seq <- c("#f22300", "#e0af00", "#ebcc2a", "#79b7c5", "#3b9ab2")
+
+                   # Create color function using colorBin with custom breaks
+                   color_func_dynamic <- colorBin(
+                     palette = col_seq,
+                     domain = c(0, 100),
+                     bins = full_breaks,
+                     na.color = "lightgrey"
+                   )
+
+                   # Generate legend colors and labels
+                   leg_col_dynamic <- col_seq
+                   leg_lab_dynamic <- paste0(
+                     c(0, breaks),
+                     " - ",
+                     c(breaks, 100),
+                     "%"
+                   )
+
+                   list(
+                     color_func = color_func_dynamic,
+                     leg_col = leg_col_dynamic,
+                     leg_lab = leg_lab_dynamic,
+                     breaks = full_breaks
+                   )
+                 })
+
+
                  # --------------------------------------
                  # Main leaflet map reactive expression
                  # --------------------------------------
@@ -272,8 +380,9 @@ module_main_map_server <- function(id) {
                      
                    }
                    
-                   # Apply color ramp function
-                   huc_geom$color_vec <- color_func(huc_geom$values_sc)
+                   # Apply color ramp function (using dynamic color scale)
+                   color_scale <- r_color_scale()
+                   huc_geom$color_vec <- color_scale$color_func(huc_geom$values_sc)
                    
                    # Update reference color dataframe rv to reset colors after selection
                    col_df <-
@@ -294,9 +403,12 @@ module_main_map_server <- function(id) {
                  print("HUC polygon draw...")
                  
                  observe({
-                   
+
                    print("Updating polygons with observer()...")
-                   
+
+                   # Get dynamic color scale for legend
+                   color_scale <- r_color_scale()
+
                    if(isolate(session$userData$geom_type) == "lines") {
                      line_weight <- 3
                      if(!(is.null(isolate(session$userData$rv_HUC_layer_load$data$WIDTH)))) {
@@ -320,11 +432,11 @@ module_main_map_server <- function(id) {
                        ) %>%
                        # Delete any old pre-existing legend
                        clearControls() %>%
-                       # Add new legend
+                       # Add new legend with dynamic breaks
                        addLegend(
                          "bottomright",
-                         colors = leg_col,
-                         labels = leg_lab,
+                         colors = color_scale$leg_col,
+                         labels = color_scale$leg_lab,
                          title = session$userData$rv_stressor_response$active_layer,
                          opacity = 0.9
                        )
@@ -350,11 +462,11 @@ module_main_map_server <- function(id) {
                        ) %>%
                        # Delete any old pre-existing legend
                        clearControls() %>%
-                       # Add new legend
+                       # Add new legend with dynamic breaks
                        addLegend(
                          "bottomright",
-                         colors = leg_col,
-                         labels = leg_lab,
+                         colors = color_scale$leg_col,
+                         labels = color_scale$leg_lab,
                          title = session$userData$rv_stressor_response$active_layer,
                          opacity = 0.9
                        )
@@ -519,30 +631,66 @@ module_main_map_server <- function(id) {
                  output$stressor_variable_list <- renderUI({
                    req(session$userData$rv_stressor_response$stressor_names)
                    snames <- session$userData$rv_stressor_response$stressor_names
-                   
+
                    # wrap them in a container so we know where they live
                    tags$div(id = ns("stressor_list_container"),
                             lapply(snames, function(s) {
                               # for each stressor name, call the UI function with its namespace
-                              module_stressor_variable_ui(ns(s))
+                              # Pass stressor_name explicitly for the onclick handler
+                              module_stressor_variable_ui(ns(s), stressor_name = s)
                             })
                    )
                  })
-                 
+
+                 # Track which module servers have been initialized to avoid re-initialization
+                 # Module servers should only be called ONCE per module ID
+                 initialized_modules <- reactiveVal(character(0))
+
                  # 2) separately, whenever the list of stressors changes, register exactly
                  #    one moduleServer() per new ID, **outside** of renderUI().
+                 #    IMPORTANT: Only initialize modules that haven't been initialized yet
                  observeEvent(session$userData$rv_stressor_response$stressor_names, {
                    snames <- session$userData$rv_stressor_response$stressor_names
-                   
-                   lapply(seq_along(snames), function(i) {
-                     # this will call module_stressor_variable_server() exactly once
-                     # for each `snames[i]`, and tie it to the UI you just created above
-                     module_stressor_variable_server(snames[i], stressor_index = i)
-                   })
+                   already_initialized <- initialized_modules()
+
+                   # Check if stressor list was completely replaced (e.g., new workbook upload)
+                   # If any previously initialized modules are no longer in the list, reset everything
+                   if(length(already_initialized) > 0 && !all(already_initialized %in% snames)) {
+                     # Stressor list was replaced - reinitialize all modules
+                     print("Stressor list replaced - reinitializing all module servers...")
+                     initialized_modules(character(0))
+                     already_initialized <- character(0)
+                   }
+
+                   # Find new stressors that need module servers
+                   new_stressors <- setdiff(snames, already_initialized)
+
+                   if(length(new_stressors) > 0) {
+                     print(paste("Initializing module servers for:", paste(new_stressors, collapse = ", ")))
+                     lapply(new_stressors, function(s) {
+                       # Find the index for this stressor
+                       i <- which(snames == s)
+                       if(length(i) > 0) {
+                         # Initialize the module server for this new stressor
+                         module_stressor_variable_server(s, stressor_index = i[1])
+                       }
+                     })
+
+                     # Update the list of initialized modules
+                     initialized_modules(c(already_initialized, new_stressors))
+                   }
                  })
-                 
-                 
-                 
+
+                 # ---------------------------------------------------------
+                 # Handle stressor selection via direct onclick from UI
+                 # This approach survives UI re-renders unlike shinyjs::onclick()
+                 # ---------------------------------------------------------
+                 observeEvent(input$stressor_click, {
+                   stressor_name <- input$stressor_click
+                   print(paste0("User click.. update to layer... ", stressor_name))
+                   session$userData$rv_stressor_response$active_layer <- stressor_name
+                 })
+
                  # ---------------------------------------------------------
                  # Show the HUC Code and Basin Name Above Map
                  # ---------------------------------------------------------

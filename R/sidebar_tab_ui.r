@@ -22,7 +22,7 @@ sidebar_tab_ui <- function(id) {
     shinydashboard::sidebarMenu(
       id = "tabs",
       menuItem("About", tabName = "tab_about", icon = icon("info")),
-      menuItem("Main Overview", tabName = "tab_main_map", icon = icon("map")),
+      menuItem("Map & Joe Model", tabName = "tab_main_map", icon = icon("map")),
       menuItem("Population Model", tabName = "tab_matrix_model", icon = icon("sliders-h")),
       menuItem("Special Features", tabName = "tab_advanced",
                menuSubItem("Custom Formula Builder", tabName = "tab_stressor_sandbox", icon = icon("gear")),

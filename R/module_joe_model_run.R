@@ -393,7 +393,8 @@ module_joe_model_run_server <- function(id) {
               sr_wb_dat = sr_wb_dat_in,
               MC_sims = n_mc_sims,
               adult_sys_cap = FALSE, # do not filter out non-target stressors
-              socioeconomic_inputs = socioeconomic_inputs
+              socioeconomic_inputs = socioeconomic_inputs,
+              strict_na = TRUE
           )
           
           print("Finished the Joe Model run...")

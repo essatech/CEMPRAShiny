@@ -6,11 +6,27 @@
 #'
 #' @return a tagList containing UI elements
 #'
-module_stressor_variable_ui <- function(id) {
+module_stressor_variable_ui <- function(id, stressor_name = NULL) {
   ns <- NS(id)
+
+  # Use stressor_name if provided, otherwise extract from namespaced id
+  # The id comes in as "main_map-Stressor_Name", we need just "Stressor_Name"
+  if(is.null(stressor_name)) {
+    # Extract stressor name by removing the "main_map-" prefix
+    stressor_name <- sub("^main_map-", "", id)
+  }
+
+  # Use onclick attribute directly in HTML to avoid shinyjs registration issues
+  # This ensures click handlers survive UI re-renders
+  onclick_js <- sprintf(
+    "Shiny.setInputValue('main_map-stressor_click', '%s', {priority: 'event'});",
+    stressor_name
+  )
 
   tags$div(
     class = "stack-box map-variable", id = ns("var_id"),
+    onclick = onclick_js,
+    style = "cursor: pointer;",
     shinydashboard::box(
       width = 12,
       background = "light-blue",
@@ -40,17 +56,45 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
   moduleServer(
     id,
     function(input, output, session) {
-      
+
       ns <- session$ns
-      
-      
+
+      # Store the module ID (stressor name) for dynamic index lookup
+      module_stressor_id <- id
+
+      # Helper function to dynamically look up current index for this stressor
+      # This ensures the module always uses the correct index even after workbook replacement
+      get_current_index <- function() {
+        snames <- session$userData$rv_stressor_response$stressor_names
+        inames <- session$userData$rv_stressor_response$interaction_names
+
+        # First check if it's a regular stressor
+        idx <- which(snames == module_stressor_id)
+        if(length(idx) > 0) {
+          return(idx[1])
+        }
+
+        # Then check if it's an interaction matrix
+        idx <- which(inames == module_stressor_id)
+        if(length(idx) > 0) {
+          return(length(snames) + idx[1])
+        }
+
+        # Not found - return NA
+        return(NA)
+      }
+
+
       # Set the label
       output$variable_label <- renderUI({
         # print("Variable Label")
-        label <- session$userData$rv_stressor_response$pretty_names[stressor_index]
+        current_index <- get_current_index()
+        if(is.na(current_index)) return(NULL)
+
+        label <- session$userData$rv_stressor_response$pretty_names[current_index]
         # Adjust if matrix interaction term
-        if (stressor_index > length(session$userData$rv_stressor_response$pretty_names)) {
-          label <- session$userData$rv_stressor_response$interaction_names[stressor_index - length(session$userData$rv_stressor_response$pretty_names)]
+        if (current_index > length(session$userData$rv_stressor_response$pretty_names)) {
+          label <- session$userData$rv_stressor_response$interaction_names[current_index - length(session$userData$rv_stressor_response$pretty_names)]
         }
         label <- paste0(label, "  ")
         tags$p(label, style = "float: left;")
@@ -58,11 +102,14 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
       # Change mouse-over raw value
       output$variable_val_raw <- renderUI({
-        sname <- session$userData$rv_stressor_response$stressor_names[stressor_index]
+        current_index <- get_current_index()
+        if(is.na(current_index)) return(NULL)
+
+        sname <- session$userData$rv_stressor_response$stressor_names[current_index]
 
         # Adjust if matrix interaction term
-        if (stressor_index > length(session$userData$rv_stressor_response$stressor_names)) {
-          sname <- session$userData$rv_stressor_response$interaction_names[stressor_index - length(session$userData$rv_stressor_response$pretty_names)]
+        if (current_index > length(session$userData$rv_stressor_response$stressor_names)) {
+          sname <- session$userData$rv_stressor_response$interaction_names[current_index - length(session$userData$rv_stressor_response$pretty_names)]
         }
 
         if (is.null(session$userData$rv_stressor_response$active_values_raw)) {
@@ -84,29 +131,32 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
       observe({
         req(input$hiddenload)
         # print("Selected Variable")
-        
+
         # MJB added here June 6 2023
-        
+
+        # Get current index dynamically
+        current_index <- get_current_index()
+
         # Set the stressor response object as a reactive value
-        if (!(is.na(stressor_index))) {
-          
+        if (!(is.na(current_index))) {
+
           active <- session$userData$rv_stressor_response$active_layer
-          current <- session$userData$rv_stressor_response$stressor_names[stressor_index]
+          current <- session$userData$rv_stressor_response$stressor_names[current_index]
 
 
           # Fix name if selecting an interaction matrix
           if (is.na(current)) {
             # Assume interaction matrix
-            current <- session$userData$rv_stressor_response$interaction_names[stressor_index - length(session$userData$rv_stressor_response$pretty_names)]
+            current <- session$userData$rv_stressor_response$interaction_names[current_index - length(session$userData$rv_stressor_response$pretty_names)]
           }
-          
-         
+
+
          if(is.null(current)) {
            current <- NA # MJB added - fix exception for null
          }
-          
+
           if (!(is.na(current)) & !(is.na(active))) {
-            
+
             # Special case for system_capacity
             if (active == "system_capacity") {
               q_code <- paste0("jQuery('#main_map-var_id').addClass('var-selected');")
@@ -116,18 +166,18 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
               q_code <- paste0("jQuery('#main_map-var_id').removeClass('var-selected');")
               shinyjs::runjs(code = q_code)
             }
-            
+
             current_id <- current
-            
+
             # JS can not have space in IDs
             current_id <- gsub(" ", "__", current_id, fixed = TRUE)
             active_id <- gsub(" ", "__", active, fixed = TRUE)
-            
+
             # deal with space and jQuery ID
             if(grepl(" ", current_id)) {
               current_id <- gsub(" ", "\\\ ", current_id, fixed = TRUE)
             }
-            
+
             if (active_id == current) {
               # print("Adding class")
               q_code <- paste0("jQuery('#main_map-", current_id, "-var_id').addClass('var-selected');")
@@ -141,37 +191,10 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
       })
 
 
-      # ---------------------------------------------------------
-      # Listen to click events to change target variable selected
-      observe({
-        # ensure UI is loaded - do not run if not set
-        req(input$hiddenload)
-        # User clicks on ID
-        current <- session$userData$rv_stressor_response$stressor_names[stressor_index]
-
-        # If interaction matrix
-        if (is.na(current)) {
-          # Assume interaction matrix
-          current <- session$userData$rv_stressor_response$interaction_names[stressor_index - length(session$userData$rv_stressor_response$pretty_names)]
-        }
-
-        # Update reactive value of target variable selected
-        updateActiveVar <- function(current) {
-          print(paste0("User click.. update to layer... ", current))
-          # Set css color of system capacity button to light blue
-          
-          session$userData$rv_stressor_response$active_layer <- current
-        }
-        # Use mouse click
-        my_id <- paste0("main_map-", current, "-var_id")
-        onclick(my_id,
-          updateActiveVar(current),
-          asis = TRUE
-        )
-      })
-
-
-
+      # NOTE: Click events for stressor selection are now handled via direct HTML onclick
+      # in the UI function (module_stressor_variable_ui) which calls Shiny.setInputValue().
+      # This approach survives UI re-renders, unlike shinyjs::onclick().
+      # The observer for input$stressor_click is in module_main_map.R.
 
 
 
@@ -180,22 +203,26 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
       #-------------------------------------------------------
       # Open the stressor response dialog box
       observeEvent(input$response_plot, {
-        
+
         # Dont load until button clicked
         req(input$hiddenload)
 
-        this_var <- session$userData$rv_stressor_response$pretty_names[stressor_index]
+        # Get current index dynamically
+        current_index <- get_current_index()
+        if(is.na(current_index)) return(NULL)
+
+        this_var <- session$userData$rv_stressor_response$pretty_names[current_index]
         # print(paste0("Stressor response modal is open for ... ", this_var))
 
         # Increment modal refresh counter
         print("----SR MODAL OPEN ------")
-        print(stressor_index)
-        
+        print(current_index)
+
         # -------------------------------------------------------
         # If interaction matrix - show but not editable
         if (is.na(this_var)) {
           # Assume interaction matrix
-          this_var <- session$userData$rv_stressor_response$interaction_names[stressor_index - length(session$userData$rv_stressor_response$pretty_names)]
+          this_var <- session$userData$rv_stressor_response$interaction_names[current_index - length(session$userData$rv_stressor_response$pretty_names)]
 
           showModal(modalDialog(
             title = paste0("Stressor-Response Relationship: ", this_var),
@@ -252,16 +279,83 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
           # Main sheet attributes
           this_main <- session$userData$rv_stressor_response$main_sheet
 
+          # -------------------------------------------------------
+          # Get the current stressor name (not pretty name)
+          this_stressor_name <- session$userData$rv_stressor_response$stressor_names[current_index]
+
+          # Get current row from main_sheet for this stressor
+          current_row <- this_main[this_main$Stressors == this_stressor_name, ]
+
+          # Extract current values (handle NA/NULL gracefully)
+          current_interaction <- if(nrow(current_row) > 0 && !is.null(current_row$Interaction)) current_row$Interaction[1] else NA
+          current_linked <- if(nrow(current_row) > 0 && !is.null(current_row$Linked)) current_row$Linked[1] else NA
+          current_function <- if(nrow(current_row) > 0 && !is.null(current_row$Function)) current_row$Function[1] else "continuous"
+          current_stress_scale <- if(nrow(current_row) > 0 && !is.null(current_row$Stress_Scale)) current_row$Stress_Scale[1] else "linear"
+          current_model <- if(nrow(current_row) > 0 && !is.null(current_row$Model)) current_row$Model[1] else "All"
+          current_life_stages <- if(nrow(current_row) > 0 && !is.null(current_row$Life_stages)) current_row$Life_stages[1] else "adult"
+          current_parameters <- if(nrow(current_row) > 0 && !is.null(current_row$Parameters)) current_row$Parameters[1] else "survival"
+          current_units <- if(nrow(current_row) > 0 && !is.null(current_row$Units)) current_row$Units[1] else ""
+
+          # Handle NA values for display
+          current_interaction <- ifelse(is.na(current_interaction), "NA", as.character(current_interaction))
+          current_linked <- ifelse(is.na(current_linked), "NA", as.character(current_linked))
+          current_units <- ifelse(is.na(current_units), "", as.character(current_units))
+
+          # Build dynamic life stages choices from life cycle profile
+          life_stage_choices <- c(
+            "adult" = "adult",
+            "all" = "all",
+            "sub_adult" = "sub_adult",
+            "spawners" = "spawners",
+            "stage_e" = "stage_e",
+            "stage_0" = "stage_0",
+            "stage_1" = "stage_1",
+            "stage_2" = "stage_2",
+            "stage_3" = "stage_3",
+            "stage_4" = "stage_4",
+            "stage_5" = "stage_5",
+            "stage_Pb_1" = "stage_Pb_1",
+            "stage_Pb_2" = "stage_Pb_2",
+            "stage_Pb_3" = "stage_Pb_3",
+            "stage_B_2" = "stage_B_2",
+            "stage_B_3" = "stage_B_3",
+            "stage_B_4" = "stage_B_4",
+            "u" = "u",
+            "smig" = "smig"
+          )
+
+          # Ensure current value is in choices
+          if(!is.na(current_life_stages) && !(current_life_stages %in% life_stage_choices)) {
+            life_stage_choices <- c(life_stage_choices, setNames(current_life_stages, current_life_stages))
+          }
+
           showModal(modalDialog(
             title = paste0("Stressor-Response Relationship: ", this_var_pretty),
+            class = "sr-modal",
             tagList(
-              
+
               fluidRow(shinydashboard::box(
                 width = 12,
-                
-                tags$p("Adjust how the stressor-response relationship is linked to the focal species/systems. The following inputs are sourced from the Main worksheet of the Stressor-Response workbook. Adjust the following dropdowns to control min/max interactions, change the functional form, the model endpoint (Population Model vs Joe Model), and vital rate linkages (if associated with the Population Model).", class = "small-helper-text"),
-                
-                
+                class = "sr-main-sheet-box",
+
+                # Brief intro with expandable help
+                tags$div(
+                  class = "sr-help-section",
+                  tags$p("Configure how this stressor-response relationship links to the focal species/systems.",
+                         class = "small-helper-text", style = "display: inline;"),
+                  actionLink(ns("toggle_sr_help"), "Learn more...", class = "help-toggle-link")
+                ),
+
+                # Expandable detailed help
+                shinyjs::hidden(
+                  tags$div(
+                    id = ns("sr_help_expanded"),
+                    class = "sr-help-expanded",
+                    tags$p("The following inputs are sourced from the Main worksheet of the Stressor-Response workbook. Adjust the dropdowns to control min/max interactions, change the functional form, the model endpoint (Population Model vs Joe Model), and vital rate linkages (if associated with the Population Model).",
+                           class = "small-helper-text")
+                  )
+                ),
+
                 fluidRow(
                   column(
                     width = 3,
@@ -269,58 +363,82 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
                       ns("s_Interaction"),
                       "Interactions:",
                       c(
-                        "NA" = NA,
+                        "NA" = "NA",
                         "Minimum" = "Minimum",
                         "Maximum" = "Maximum"
-                      )
+                      ),
+                      selected = current_interaction
                     ),
                     bsTooltip(
                       id = ns("s_Interaction"),
-                      title = "Choose whether to use the minimum or maximum interaction rule",
+                      title = "Is the stressor part of a group of highly correlated stressors? If so, choose Minimum (or Maximum) and assign a linked group. Only the stressor with the lowest (or highest) response score will be used.",
                       placement = "top",
                       trigger = "hover"
                     ),
-                    
-                    class = "grouped-box-1"
+                    class = "sr-input-box"
                   ),
                   column(
                     width = 3,
                     selectInput(
                       ns("s_Linked"),
-                      "Interaction (Linked) Groups:",
+                      "Linked Groups:",
                       c(
-                        "NA" = NA,
+                        "NA" = "NA",
                         "A" = "A",
                         "B" = "B",
                         "C" = "C",
                         "D" = "D",
-                        "E" = "E"
-                      )
+                        "E" = "E",
+                        "F" = "F",
+                        "G" = "G",
+                        "H" = "H"
+                      ),
+                      selected = current_linked
                     ),
-                    class = "grouped-box-1"
+                    bsTooltip(
+                      id = ns("s_Linked"),
+                      title = "Assign a group name if this stressor is linked to others. All stressors in the group must share the same Interaction type (Minimum or Maximum).",
+                      placement = "top",
+                      trigger = "hover"
+                    ),
+                    class = "sr-input-box"
                   ),
-                  
+
                   column(
                     width = 3,
                     selectInput(
                       ns("s_Function"),
                       "Function Type:",
-                      c("continuous" = "continuous", "step" = "step")
+                      c("continuous" = "continuous", "step" = "step"),
+                      selected = current_function
                     ),
-                    class = "grouped-box-2"
+                    bsTooltip(
+                      id = ns("s_Function"),
+                      title = "Use 'continuous' for smooth interpolation (e.g., temperature). Use 'step' for discrete values (e.g., barrier counts).",
+                      placement = "top",
+                      trigger = "hover"
+                    ),
+                    class = "sr-input-box"
                   ),
-                  
+
                   column(
                     width = 3,
                     selectInput(
                       ns("s_Stress_Scale"),
                       "Raw Stressor Scale:",
-                      c("linear" = "linear", "log" = "log")
+                      c("linear" = "linear", "log" = "log"),
+                      selected = current_stress_scale
                     ),
-                    class = "grouped-box-2"
+                    bsTooltip(
+                      id = ns("s_Stress_Scale"),
+                      title = "Choose how interpolation should occur: 'linear' for linear interpolation (default) or 'log' for natural logarithm.",
+                      placement = "top",
+                      trigger = "hover"
+                    ),
+                    class = "sr-input-box"
                   )
                 ),
-                
+
                 fluidRow(
                   column(
                     width = 3,
@@ -331,39 +449,66 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
                         "All" = "All",
                         "Joe Model" = "Joe Model",
                         "Population Model" = "Population Model"
-                      )
+                      ),
+                      selected = current_model
                     ),
-                    class = "grouped-box-4"
+                    bsTooltip(
+                      id = ns("s_Model"),
+                      title = "Target model for this stressor: 'All' (both models), 'Joe Model', or 'Population Model'.",
+                      placement = "top",
+                      trigger = "hover"
+                    ),
+                    class = "sr-input-box"
                   ),
                   column(
                     width = 3,
                     selectInput(
                       ns("s_Life_stages"),
                       "Life Stages (Pop. Only):",
-                      c("..." = "...", "other..." = "other...")
+                      life_stage_choices,
+                      selected = current_life_stages
                     ),
-                    class = "grouped-box-3"
+                    bsTooltip(
+                      id = ns("s_Life_stages"),
+                      title = "For Population Model: define which life stage this stressor affects (e.g., stage_0, stage_1, adult).",
+                      placement = "top",
+                      trigger = "hover"
+                    ),
+                    class = "sr-input-box"
                   ),
                   column(
                     width = 3,
                     selectInput(
                       ns("s_Parameters"),
-                      "Vital Rate Parameters (Pop. Only):",
+                      "Vital Rate (Pop. Only):",
                       c(
                         "survival" = "survival",
                         "capacity" = "capacity",
                         "fecundity" = "fecundity"
-                      )
+                      ),
+                      selected = current_parameters
                     ),
-                    class = "grouped-box-3"
+                    bsTooltip(
+                      id = ns("s_Parameters"),
+                      title = "For Population Model: which vital rate parameter is modified (survival, capacity, or fecundity).",
+                      placement = "top",
+                      trigger = "hover"
+                    ),
+                    class = "sr-input-box"
                   ),
                   column(
                     width = 3,
-                    textInput(ns("s_Units"), "Raw Stressor Units:", value = "units"),
-                    class = "grouped-box-4"
+                    textInput(ns("s_Units"), "Raw Stressor Units:", value = current_units),
+                    bsTooltip(
+                      id = ns("s_Units"),
+                      title = "Specify the units for the raw stressor values (e.g., Celsius, mg/L, count).",
+                      placement = "top",
+                      trigger = "hover"
+                    ),
+                    class = "sr-input-box"
                   )
                 ),
-                
+
               )), 
               
               
@@ -372,9 +517,26 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
               fluidRow(
                 shinydashboard::box(
                   width = 12,
-                  
-                  tags$p("Use the table below to edit and adjust the stressor-response (dose-response) relationship. Click on cells in the table to adjust values. The graph shows the dose:response relationship between the raw stressor values (x-axis) and the stressor-response score (or mean system capacity, y-axis). The red line shows the mean value, and the shading represents uncertainty or stochasticity in the relationship. The red shading represents one standard deviation, and the grey shading represents the upper and lower bounds of min and max values. Click and drag within the graph window to zoom in on particular trends; double-click the graph to zoom out to full view.", class = "small-helper-text"),
-                  
+                  class = "sr-chart-box",
+
+                  # Brief intro with expandable help for chart
+                  tags$div(
+                    class = "sr-help-section",
+                    tags$p("The graph shows the dose-response relationship. ",
+                           class = "small-helper-text", style = "display: inline;"),
+                    actionLink(ns("toggle_chart_help"), "Learn more...", class = "help-toggle-link")
+                  ),
+
+                  # Expandable detailed help for chart
+                  shinyjs::hidden(
+                    tags$div(
+                      id = ns("chart_help_expanded"),
+                      class = "sr-help-expanded",
+                      tags$p("The x-axis shows raw stressor values and the y-axis shows the stressor-response score (mean system capacity). The red line represents the mean value, red shading shows one standard deviation, and grey shading represents upper/lower bounds. Click and drag to zoom in; double-click to reset.",
+                             class = "small-helper-text")
+                    )
+                  ),
+
                   dygraphOutput(ns("dose_response_plot"))
                 )
               ),
@@ -395,18 +557,52 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
                       )
                     ),
                     
-                    nav_panel("Raw Distribution", tagList(fluidRow(
-                      column(
-                        width = 12,
-                        tags$b("Distribution of Raw Stressor Values:"),
-                        tags$p(textOutput(ns("text_preview"))),
-                        plotOutput(ns("hist_vals_plot")),
+                    nav_panel("Raw Distribution", tagList(
+                      tags$p(
+                        "This histogram shows the distribution of raw stressor magnitude values across all locations. Purple dashed lines indicate the breakpoints defined in the stressor-response curve.",
+                        class = "small-helper-text"
+                      ),
+                      fluidRow(
+                        column(
+                          width = 12,
+                          tags$b("Distribution of Raw Stressor Values:"),
+                          tags$p(textOutput(ns("text_preview"))),
+                          plotOutput(ns("hist_vals_plot"), width = "100%", height = "300px")
+                        )
                       )
-                      
-                    ))), 
+                    )), 
                     
-                    nav_panel("Correlated Stressors", tagList("...")),
-                    nav_panel("Location SR Scores", tagList("..."))
+                    nav_panel("Correlated Stressors", tagList(
+                      tags$p(
+                        "This table shows stressors that are most correlated with the current stressor based on their magnitude values across all locations. High correlations (R\u00b2 close to 1) may indicate stressors that measure similar environmental conditions or share common drivers. Consider using the Interaction/Linked Groups settings to avoid double-counting highly correlated stressors in the cumulative effects assessment.",
+                        class = "small-helper-text"
+                      ),
+                      fluidRow(
+                        column(
+                          width = 12,
+                          tags$b("Top Correlated Stressors (Pearson R\u00b2):"),
+                          tableOutput(ns("correlated_stressors_table"))
+                        )
+                      )
+                    )),
+                    nav_panel("Location SR Scores", tagList(
+                      tags$p(
+                        "This plot displays the stressor-response scores for each location, sorted from highest to lowest. Click the button below to generate the plot. For datasets with many locations, this may take a moment to render.",
+                        class = "small-helper-text"
+                      ),
+                      fluidRow(
+                        column(
+                          width = 12,
+                          actionButton(
+                            ns("generate_location_plot"),
+                            label = tagList(icon("chart-bar"), " Generate Location Plot"),
+                            class = "btn btn-primary",
+                            style = "margin-bottom: 15px;"
+                          ),
+                          uiOutput(ns("location_sr_plot_ui"))
+                        )
+                      )
+                    ))
                     
                   ),
                   
@@ -432,15 +628,84 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
       #-------------------------------------------------------
       # Close stressor response modal with custom button
+      # Save form values back to main_sheet reactive object
       #-------------------------------------------------------
       observeEvent(input$close_sr_modal, {
-        print("sr modal closed")
-        # Trigger reloaf of data
+        print("sr modal closed - saving main sheet updates")
+
+        # Get current index dynamically
+        current_index <- get_current_index()
+
+        # Get the current stressor name
+        this_stressor_name <- if(!is.na(current_index)) {
+          session$userData$rv_stressor_response$stressor_names[current_index]
+        } else {
+          module_stressor_id  # Fallback to module ID
+        }
+
+        # Find the row index in main_sheet for this stressor
+        row_idx <- which(session$userData$rv_stressor_response$main_sheet$Stressors == this_stressor_name)
+
+        if(length(row_idx) > 0) {
+          # Update main_sheet with form values
+          # Handle NA values for Interaction and Linked
+          interaction_val <- input$s_Interaction
+          interaction_val <- ifelse(interaction_val == "NA" || is.null(interaction_val), NA, interaction_val)
+
+          linked_val <- input$s_Linked
+          linked_val <- ifelse(linked_val == "NA" || is.null(linked_val), NA, linked_val)
+
+          # Update each column in main_sheet
+          session$userData$rv_stressor_response$main_sheet$Interaction[row_idx] <- interaction_val
+          session$userData$rv_stressor_response$main_sheet$Linked[row_idx] <- linked_val
+          session$userData$rv_stressor_response$main_sheet$Function[row_idx] <- input$s_Function
+          session$userData$rv_stressor_response$main_sheet$Stress_Scale[row_idx] <- input$s_Stress_Scale
+          session$userData$rv_stressor_response$main_sheet$Model[row_idx] <- input$s_Model
+          session$userData$rv_stressor_response$main_sheet$Life_stages[row_idx] <- input$s_Life_stages
+          session$userData$rv_stressor_response$main_sheet$Parameters[row_idx] <- input$s_Parameters
+          session$userData$rv_stressor_response$main_sheet$Units[row_idx] <- input$s_Units
+
+          print(paste0("Updated main_sheet for stressor: ", this_stressor_name))
+          print(paste0("  Interaction: ", interaction_val))
+          print(paste0("  Linked: ", linked_val))
+          print(paste0("  Function: ", input$s_Function))
+          print(paste0("  Stress_Scale: ", input$s_Stress_Scale))
+          print(paste0("  Model: ", input$s_Model))
+          print(paste0("  Life_stages: ", input$s_Life_stages))
+          print(paste0("  Parameters: ", input$s_Parameters))
+          print(paste0("  Units: ", input$s_Units))
+        }
+
+        # Trigger reload of data
         session$userData$rv_srdt$reload <- 2
         print(session$userData$rv_srdt$reload)
         removeModal()
       })
 
+
+      #-------------------------------------------------------
+      # Toggle observers for expandable help sections
+      #-------------------------------------------------------
+
+      # Toggle main sheet help
+      observeEvent(input$toggle_sr_help, {
+        shinyjs::toggle("sr_help_expanded")
+        if (input$toggle_sr_help %% 2 == 1) {
+          shinyjs::html("toggle_sr_help", "Show less")
+        } else {
+          shinyjs::html("toggle_sr_help", "Learn more...")
+        }
+      })
+
+      # Toggle chart help
+      observeEvent(input$toggle_chart_help, {
+        shinyjs::toggle("chart_help_expanded")
+        if (input$toggle_chart_help %% 2 == 1) {
+          shinyjs::html("toggle_chart_help", "Show less")
+        } else {
+          shinyjs::html("toggle_chart_help", "Learn more...")
+        }
+      })
 
 
       #-------------------------------------------------------
@@ -526,10 +791,19 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
         
         sm_dat <- isolate(session$userData$rv_stressor_magnitude$sm_dat)
         sm_dat <- sm_dat[which(sm_dat$Stressor == this_var), ]
-        
-        hist(sm_dat$Mean, main = NA, xlab = this_var)
-        for(ll in 1:length(table_vals$value)) {
-          abline(v = table_vals$value[ll], col = "purple", lty = 2, lwd = 2)
+
+        # Check for valid data before plotting histogram
+        valid_means <- sm_dat$Mean[!is.na(sm_dat$Mean)]
+        if (length(valid_means) < 2) {
+          # Not enough data for histogram - show message instead
+          plot.new()
+          text(0.5, 0.5, "Insufficient data to generate histogram.\nPlease check stressor values.",
+               cex = 1.2, col = "gray50")
+        } else {
+          hist(valid_means, main = NA, xlab = this_var)
+          for(ll in 1:length(table_vals$value)) {
+            abline(v = table_vals$value[ll], col = "purple", lty = 2, lwd = 2)
+          }
         }
         
       })
@@ -544,17 +818,255 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
         this_var <- session$userData$rv_stressor_response$active_layer # New Nov 9th 2024
         # Stressor magnitude data
         sm_df <- session$userData$rv_stressor_magnitude$sm_dat
-        # Subset to targer variable
+        # Subset to target variable
         sm_sub <- sm_df[which(sm_df$Stressor == this_var), ]
-        my_mean <- round(mean(sm_sub$Mean, na.rm = TRUE), 2)
-        my_median <- round(median(sm_sub$Mean, na.rm = TRUE), 2)
-        my_min <- min(sm_sub$Mean, na.rm = TRUE)
-        my_max <- max(sm_sub$Mean, na.rm = TRUE)
-        
+
+        # Check for valid data
+        valid_means <- sm_sub$Mean[!is.na(sm_sub$Mean)]
+        if (length(valid_means) == 0) {
+          return("No valid stressor values available. Please check that stressor magnitude data has been loaded correctly.")
+        }
+
+        my_mean <- round(mean(valid_means), 2)
+        my_median <- round(median(valid_means), 2)
+        my_min <- round(min(valid_means), 2)
+        my_max <- round(max(valid_means), 2)
+
         data_rng_txt <- paste0("Summary of raw stressor values, Mean: ", my_mean, ", Median: ", my_median, " (Min: ", my_min, ", Max: ", my_max, ")")
         return(data_rng_txt)
       })
 
+
+      #-------------------------------------------------------
+      # Correlated Stressors Table
+      #-------------------------------------------------------
+      # Calculate and display top 10 most correlated stressors
+      output$correlated_stressors_table <- renderTable({
+
+        # Do not run on app load
+        req(session$userData$rv_stressor_response$active_layer)
+
+        # Get the current target stressor
+        this_var <- session$userData$rv_stressor_response$active_layer
+
+        # Get stressor magnitude data
+        sm_dat <- session$userData$rv_stressor_magnitude$sm_dat
+
+        # Get all unique stressors
+        all_stressors <- unique(sm_dat$Stressor)
+
+        # Need at least 2 stressors to calculate correlations
+        if(length(all_stressors) < 2) {
+          return(data.frame(
+            Stressor = "Insufficient data",
+            `R-squared` = NA,
+            check.names = FALSE
+          ))
+        }
+
+        # Reshape data from long to wide format (locations as rows, stressors as columns)
+        # Use Mean values for correlation calculation
+        sm_wide <- tryCatch({
+          reshape2::dcast(sm_dat, HUC_ID ~ Stressor, value.var = "Mean", fun.aggregate = mean)
+        }, error = function(e) {
+          return(NULL)
+        })
+
+        if(is.null(sm_wide) || !(this_var %in% colnames(sm_wide))) {
+          return(data.frame(
+            Stressor = "Unable to calculate correlations",
+            `R-squared` = NA,
+            check.names = FALSE
+          ))
+        }
+
+        # Get the target stressor values
+        target_values <- sm_wide[[this_var]]
+
+        # Calculate correlations with all other stressors
+        other_stressors <- setdiff(colnames(sm_wide), c("HUC_ID", this_var))
+
+        if(length(other_stressors) == 0) {
+          return(data.frame(
+            Stressor = "No other stressors available",
+            `R-squared` = NA,
+            check.names = FALSE
+          ))
+        }
+
+        # Calculate Pearson R-squared for each stressor
+        correlations <- sapply(other_stressors, function(stressor) {
+          other_values <- sm_wide[[stressor]]
+          # Remove NA pairs
+          valid_idx <- !is.na(target_values) & !is.na(other_values)
+          if(sum(valid_idx) < 3) {
+            return(NA)
+          }
+          cor_val <- cor(target_values[valid_idx], other_values[valid_idx], method = "pearson")
+          return(cor_val^2)  # R-squared
+        })
+
+        # Create data frame and sort by R-squared (descending)
+        cor_df <- data.frame(
+          Stressor = names(correlations),
+          R_squared = as.numeric(correlations),
+          stringsAsFactors = FALSE
+        )
+
+        # Remove NA values and sort
+        cor_df <- cor_df[!is.na(cor_df$R_squared), ]
+        cor_df <- cor_df[order(cor_df$R_squared, decreasing = TRUE), ]
+
+        # Take top 10
+        cor_df <- head(cor_df, 10)
+
+        # Format R-squared for display
+        cor_df$R_squared <- round(cor_df$R_squared, 3)
+
+        # Rename columns for display
+        colnames(cor_df) <- c("Stressor", "R\u00b2")
+
+        # Add rank column
+        if(nrow(cor_df) > 0) {
+          cor_df <- cbind(Rank = 1:nrow(cor_df), cor_df)
+        }
+
+        return(cor_df)
+      }, striped = TRUE, hover = TRUE, bordered = TRUE)
+
+
+      #-------------------------------------------------------
+      # Location SR Scores Plot (Lazy Loading)
+      #-------------------------------------------------------
+      # Reactive value to track if plot should be generated
+      location_plot_trigger <- reactiveVal(0)
+
+      # Reset trigger when modal opens (new stressor selected)
+      observeEvent(input$response_plot, {
+        location_plot_trigger(0)
+      })
+
+      # Generate plot when button is clicked
+      observeEvent(input$generate_location_plot, {
+        location_plot_trigger(location_plot_trigger() + 1)
+      })
+
+      # Render the plot UI only when triggered
+      output$location_sr_plot_ui <- renderUI({
+        req(location_plot_trigger() > 0)
+
+        # Calculate dynamic height based on number of locations
+        sm_dat <- session$userData$rv_stressor_magnitude$sm_dat
+        this_var <- session$userData$rv_stressor_response$active_layer
+        n_locations <- length(unique(sm_dat$HUC_ID))
+        plot_height <- max(300, min(n_locations * 20, 800))
+
+        tagList(
+          plotOutput(ns("location_sr_dotplot"), height = paste0(plot_height, "px"), width = "100%")
+        )
+      })
+
+      # Render the horizontal dot plot
+      output$location_sr_dotplot <- renderPlot({
+        req(location_plot_trigger() > 0)
+        req(session$userData$rv_stressor_response$active_layer)
+
+        # Get the current target stressor
+        this_var <- session$userData$rv_stressor_response$active_layer
+
+        # Get stressor magnitude data
+        sm_dat <- session$userData$rv_stressor_magnitude$sm_dat
+
+        # Filter for the target stressor
+        sm_sub <- sm_dat[sm_dat$Stressor == this_var, ]
+
+        if(nrow(sm_sub) == 0) {
+          plot.new()
+          text(0.5, 0.5, "No data available for this stressor", cex = 1.2)
+          return()
+        }
+
+        # Get stressor-response data to calculate scores
+        sr_dat <- session$userData$rv_stressor_response$sr_dat[[this_var]]
+        main_sheet <- session$userData$rv_stressor_response$main_sheet
+        stress_scale <- main_sheet$Stress_Scale[main_sheet$Stressors == this_var]
+        func_type <- main_sheet$Function[main_sheet$Stressors == this_var]
+
+        # Default values if not found
+        if(length(stress_scale) == 0 || is.na(stress_scale)) stress_scale <- "linear"
+        if(length(func_type) == 0 || is.na(func_type)) func_type <- "continuous"
+
+        # Calculate SR scores for each location using interpolation
+        calculate_sr_score <- function(raw_value, sr_data, scale, func) {
+          if(is.na(raw_value)) return(NA)
+
+          x_vals <- sr_data$value
+          y_vals <- sr_data$mean_system_capacity
+
+          if(scale == "log") {
+            x_vals <- log(x_vals + 1)
+            raw_value <- log(raw_value + 1)
+          }
+
+          if(func == "step") {
+            # Step function: find the closest lower breakpoint
+            idx <- max(which(x_vals <= raw_value), 1, na.rm = TRUE)
+            if(length(idx) == 0 || is.na(idx)) idx <- 1
+            return(y_vals[idx])
+          } else {
+            # Continuous: linear interpolation
+            score <- approx(x_vals, y_vals, xout = raw_value, rule = 2)$y
+            return(score)
+          }
+        }
+
+        # Calculate scores for all locations
+        sm_sub$SR_Score <- sapply(sm_sub$Mean, function(x) {
+          calculate_sr_score(x, sr_dat, stress_scale, func_type)
+        })
+
+        # Create location labels (HUC_ID - NAME, max 20 chars)
+        sm_sub$Location_Label <- mapply(function(huc_id, name) {
+          if(is.na(name) || name == "") {
+            label <- as.character(huc_id)
+          } else {
+            label <- paste0(huc_id, " - ", name)
+          }
+          if(nchar(label) > 20) {
+            label <- paste0(substr(label, 1, 17), "...")
+          }
+          return(label)
+        }, sm_sub$HUC_ID, sm_sub$NAME, SIMPLIFY = TRUE)
+
+        # Sort by SR_Score (highest to lowest)
+        sm_sub <- sm_sub[order(sm_sub$SR_Score, decreasing = FALSE), ]
+
+        # Convert to factor to preserve order in plot
+        sm_sub$Location_Label <- factor(sm_sub$Location_Label, levels = sm_sub$Location_Label)
+
+        # Create the horizontal dot plot using ggplot2
+        p <- ggplot(sm_sub, aes(x = SR_Score, y = Location_Label)) +
+          geom_point(color = "#3b9ab2", size = 3) +
+          geom_segment(aes(x = 0, xend = SR_Score, y = Location_Label, yend = Location_Label),
+                       color = "#3b9ab2", alpha = 0.5) +
+          scale_x_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+          labs(
+            x = "Stressor-Response Score (%)",
+            y = "Location",
+            title = paste0("SR Scores by Location: ", gsub("_", " ", this_var))
+          ) +
+          theme_minimal() +
+          theme(
+            axis.text.y = element_text(size = 8),
+            axis.text.x = element_text(size = 10),
+            axis.title = element_text(size = 11),
+            plot.title = element_text(size = 12, face = "bold"),
+            panel.grid.major.y = element_line(color = "grey90"),
+            panel.grid.minor = element_blank()
+          )
+
+        print(p)
+      })
 
 
       #------------------------------------------------------------------------
@@ -720,10 +1232,22 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
       # render 2-factor interaction matrix table
       #------------------------------------------------------------------------
       #------------------------------------------------------------------------
-      
+
+      # Helper to get interaction matrix variable name
+      get_interaction_var <- function() {
+        current_index <- get_current_index()
+        if(is.na(current_index)) return(NULL)
+        snames <- session$userData$rv_stressor_response$stressor_names
+        if(current_index > length(snames)) {
+          return(session$userData$rv_stressor_response$interaction_names[current_index - length(snames)])
+        }
+        return(NULL)
+      }
+
       output$interaction_matrix_main <- DT::renderDataTable({
           print("Rendering matrix intraction table...")
-          this_var <- session$userData$rv_stressor_response$interaction_names[stressor_index - length(session$userData$rv_stressor_response$stressor_names)]
+          this_var <- get_interaction_var()
+          req(this_var)
           mat_data <- session$userData$rv_stressor_response$interaction_values[[this_var]]
           mtable <- mat_data$mat_msc[, 2:ncol(mat_data$mat_msc)]
           rnms <- unlist(mat_data$mat_msc[, 1])
@@ -738,7 +1262,8 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
       output$interaction_matrix_sd <- DT::renderDataTable({
           print("Rendering matrix intraction table...")
-          this_var <- session$userData$rv_stressor_response$interaction_names[stressor_index - length(session$userData$rv_stressor_response$stressor_names)]
+          this_var <- get_interaction_var()
+          req(this_var)
           mat_data <- session$userData$rv_stressor_response$interaction_values[[this_var]]
           mtable <- mat_data$mat_sd[, 2:ncol(mat_data$mat_sd)]
           rnms <- unlist(mat_data$mat_sd[, 1])
@@ -753,7 +1278,8 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
       output$interaction_matrix_ll <- DT::renderDataTable({
           print("Rendering matrix intraction table...")
-          this_var <- session$userData$rv_stressor_response$interaction_names[stressor_index - length(session$userData$rv_stressor_response$stressor_names)]
+          this_var <- get_interaction_var()
+          req(this_var)
           mat_data <- session$userData$rv_stressor_response$interaction_values[[this_var]]
           mtable <- mat_data$mat_ll[, 2:ncol(mat_data$mat_ll)]
           rnms <- unlist(mat_data$mat_ll[, 1])
@@ -768,7 +1294,8 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
       output$interaction_matrix_ul <- DT::renderDataTable({
           print("Rendering matrix intraction table...")
-          this_var <- session$userData$rv_stressor_response$interaction_names[stressor_index - length(session$userData$rv_stressor_response$stressor_names)]
+          this_var <- get_interaction_var()
+          req(this_var)
           mat_data <- session$userData$rv_stressor_response$interaction_values[[this_var]]
           mtable <- mat_data$mat_ul[, 2:ncol(mat_data$mat_ul)]
           rnms <- unlist(mat_data$mat_ul[, 1])
@@ -783,7 +1310,8 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
       # Interaction matrix text
       output$text_interaction_matrix <- renderText({
-          this_var <- session$userData$rv_stressor_response$interaction_names[stressor_index - length(session$userData$rv_stressor_response$stressor_names)]
+          this_var <- get_interaction_var()
+          req(this_var)
           mat_data <- session$userData$rv_stressor_response$interaction_values[[this_var]]
           mcol <- mat_data$Columns
           mrow <- mat_data$Rows
@@ -792,8 +1320,8 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
 
 
-      # Finally return the stressor name
-      return(stressor_index)
+      # Finally return the module stressor ID
+      return(module_stressor_id)
     }
   )
 }

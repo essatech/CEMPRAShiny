@@ -14,7 +14,7 @@ module_huc_results_ui <- function(id) {
   
   tagList(shinydashboard::box(
     width = 12,
-    
+
     tags$div(
       style = "display: flex;",
       tags$h5(textOutput(ns(
@@ -22,90 +22,101 @@ module_huc_results_ui <- function(id) {
       )), class = "dy-accent"),
       actionButton(ns("deselect_watersheds"), "deselect all", class = "deselect-button"),
     ),
-    
-    fluidRow(
-      infoBox(
-        title = NULL,
-        color = 'blue',
-        value = module_huc_stressor_magnitude_ui(ns("stressor_magnitude")),
-        icon = icon("sliders-h"),
-        subtitle = "1. Adjust stressor magnitude values for selected watersheds"
-      ),
-      
-      
-      infoBox(
-        title = NULL,
-        color = 'blue',
-        value = module_joe_model_run_ui(ns("run_joe_model")),
-        icon = icon("play"),
-        subtitle = "2. Run (and re-run) the Cumulative Effects Joe Model"
-      ),
-      
-      infoBox(
-        title = NULL,
-        color = 'blue',
-        value = module_scenario_csc_ui(ns("scenario_csc")),
-        icon = icon("chart-simple"),
-        subtitle = "3. Review and compare results across scenarios"
-      ),
-      
-      # infoBox(
-      #   title = NULL,
-      #   color = 'blue',
-      #   value = module_joe_vs_population_ui(ns("module_joe_vs_population")),
-      #   icon = icon("chart-line"),
-      #   subtitle = "Run the population model for selected watersheds"
-      # ),
-      
-      
-    ),
-    
-    
-    
-    
-    div(id = ns("sys_cap_buttons_all"),
-        
-        fluidRow(tags$h4("Results: Joe Model Summaries")),
-        
-        fluidRow(
-          
-          
-          #infoBox(
-          #  title = NULL,
-          #  color = 'blue',
-          #  value =
-          #    actionButton(
-          #      ns("scp_by_stressors"),
-          #      tags$b("By Stressors"),
-          #      class = "chart-line",
-          #      width = "100%"
-          #    ),
-          #  icon = icon("sliders-h"),
-          #  subtitle = "Plot the system capacity across stressors for selected watersheds"
-          #),
-          
-          
-          infoBox(
-            title = NULL,
-            color = 'blue',
-            value = module_joe_model_csc_plots_selected_ui(ns("open_joe_modal_csc_plots_selected")),
-            icon = icon("sliders-h"),
-            subtitle = "Plot the cumulative system capacity for selected locations"
-          ),
-          
-          
-          infoBox(
-            title = NULL,
-            color = 'blue',
-            value = module_joe_model_csc_plots_ui(ns("joe_model_csc_plots_all")),
-            icon = icon("sliders-h"),
-            subtitle = "Plot the cumulative system capacity for all locations"
-          ),
-          
-          
-          
+
+    # Horizontal Stepper Workflow
+    tags$div(
+      class = "workflow-stepper",
+
+      # Step 1 - Optional
+      tags$div(
+        class = "workflow-step optional",
+        tags$div(class = "step-number-container",
+          tags$div(class = "step-circle", tags$span("1"))
         ),
-        ), 
+        tags$div(class = "step-content",
+          tags$span(class = "optional-badge", "Optional"),
+          tags$h5(class = "step-title", "Adjust Stressor Values"),
+          tags$p(class = "step-description", "Modify magnitude values for selected locations"),
+          tags$div(class = "step-action",
+            module_huc_stressor_magnitude_ui(ns("stressor_magnitude"))
+          )
+        ),
+        tags$div(class = "step-connector dashed")
+      ),
+
+      # Step 2 - Required
+      tags$div(
+        class = "workflow-step",
+        tags$div(class = "step-number-container",
+          tags$div(class = "step-circle", tags$span("2"))
+        ),
+        tags$div(class = "step-content",
+          tags$h5(class = "step-title", "Run Joe Model"),
+          tags$p(class = "step-description", "Execute the Cumulative Effects model"),
+          tags$div(class = "step-action",
+            module_joe_model_run_ui(ns("run_joe_model"))
+          )
+        ),
+        tags$div(class = "step-connector")
+      ),
+
+      # Step 3 - Required
+      tags$div(
+        class = "workflow-step last",
+        tags$div(class = "step-number-container",
+          tags$div(class = "step-circle", tags$span("3"))
+        ),
+        tags$div(class = "step-content",
+          tags$h5(class = "step-title", "Compare Results"),
+          tags$p(class = "step-description", "Review and compare scenarios"),
+          tags$div(class = "step-action",
+            module_scenario_csc_ui(ns("scenario_csc"))
+          )
+        )
+      )
+    ),
+
+
+
+
+    div(id = ns("sys_cap_buttons_all"),
+        class = "joe-results-section",
+
+        tags$div(class = "joe-results-header",
+          tags$h5("Results: Joe Model Summaries", class = "joe-results-title"),
+          tags$span("View cumulative system capacity plots", class = "joe-results-subtitle")
+        ),
+
+        tags$div(class = "joe-results-cards",
+          # Card 1: Selected Locations
+          tags$div(class = "joe-result-card",
+            tags$div(class = "joe-card-icon",
+              icon("map-marker-alt")
+            ),
+            tags$div(class = "joe-card-content",
+              tags$span(class = "joe-card-title", "Selected Locations"),
+              tags$span(class = "joe-card-desc", "Plot CSC for selected HUCs")
+            ),
+            tags$div(class = "joe-card-action",
+              module_joe_model_csc_plots_selected_ui(ns("open_joe_modal_csc_plots_selected"))
+            )
+          ),
+
+          # Card 2: All Locations
+          tags$div(class = "joe-result-card",
+            tags$div(class = "joe-card-icon",
+              icon("globe")
+            ),
+            tags$div(class = "joe-card-content",
+              tags$span(class = "joe-card-title", "All Locations"),
+              tags$span(class = "joe-card-desc", "Plot CSC for entire study area")
+            ),
+            tags$div(class = "joe-card-action",
+              module_joe_model_csc_plots_ui(ns("joe_model_csc_plots_all"))
+            )
+          )
+        )
+    ), 
 
     
   ))

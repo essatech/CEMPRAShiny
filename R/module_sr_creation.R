@@ -605,7 +605,8 @@ module_sr_creation_server <- function(id, df, allowed_vars = NULL) {
       }
       
       return_message <- "Formula Evaluated Successfully"
-      
+      error_occurred <- FALSE
+
       # Try to parse and evaluate the expression.
       # We evaluate in the environment of the provided dataframe `df`.
       result <- tryCatch({
@@ -613,22 +614,27 @@ module_sr_creation_server <- function(id, df, allowed_vars = NULL) {
         # Because the columns in df are vectorized, the expression is computed for every row.
         eval(expr, envir = smd2)
       }, error = function(e) {
-        return_message <- paste("Error in evaluating formula:", e$message)
+        error_occurred <<- TRUE
+        return_message <<- paste("Error in evaluating formula:", e$message)
         return(NULL)
       })
-      
+
       smd_out <- smd2[, c("HUC_ID", "NAME")]
-      
-      if (length(result) > 0) {
-        if (return_message == "Formula Evaluated Successfully") {
-          smd_out$val <- result
-        } else {
+
+      if (length(result) > 0 && !error_occurred) {
+        # Check if result contains any valid (non-NA) values
+        if (all(is.na(result))) {
+          return_message <- "Warning: Formula produced all NA values. Check that referenced stressors exist."
           smd_out$val <- NA
+        } else {
+          smd_out$val <- result
         }
       } else {
-        return_message <- paste(
-          "Error in evaluating formula. Use round brackets and * symbol for multiplication..."
-        )
+        if (!error_occurred) {
+          return_message <- paste(
+            "Error in evaluating formula. Use round brackets and * symbol for multiplication..."
+          )
+        }
         smd_out$val <- NA
       }
       
@@ -1098,9 +1104,20 @@ module_sr_creation_server <- function(id, df, allowed_vars = NULL) {
         }
       }
       
+      # Validate formula-generated stressor values (if formula builder was used)
+      has_valid_formula_values <- TRUE
+      if (!is.null(rv_formula_df$dat)) {
+        if (is.null(rv_formula_df$dat$val) || all(is.na(rv_formula_df$dat$val))) {
+          has_valid_formula_values <- FALSE
+          showNotification("Error: Formula stressor values are all NA. Please check your formula and run it again.",
+                           type = "error",
+                           duration = 8)
+        }
+      }
+
       # Ready to save SR relationship
-      if(!(return_null_plot)) {
-        
+      if(!(return_null_plot) && has_valid_formula_values) {
+
         stressor_name <- input$s_New_Stressor_Name
         stressor_name <- gsub(" ", "_", stressor_name)
         
@@ -1135,38 +1152,41 @@ module_sr_creation_server <- function(id, df, allowed_vars = NULL) {
         session$userData$rv_stressor_response$stressor_names <- c(session$userData$rv_stressor_response$stressor_names, stressor_name)
         
         # Add pretty name
-        session$userData$rv_stressor_response$pretty_names <- c(session$userData$rv_stressor_response$stressor_names, gsub("_", " ", stressor_name))
+        session$userData$rv_stressor_response$pretty_names <- c(session$userData$rv_stressor_response$pretty_names, gsub("_", " ", stressor_name))
         
         # Add the SR data table - make sure it is added as a tibble
         session$userData$rv_stressor_response$sr_dat[[stressor_name]] <- dplyr::tibble(table_vals[, c("value", "mean_system_capacity", "sd", "lwr", "upr")])
         
         # Add on data to stressor-magnitude table
         bnsm <- rv_formula_df$dat
-        bnsm$Stressor <- stressor_name 
-        bnsm$Stressor_cat <- stressor_name 
-        bnsm$Mean <- bnsm$val 
-        bnsm$SD <- 0 
-        bnsm$Distribution <- "normal" 
-        bnsm$Low_Limit <- min(bnsm$val, na.rm = TRUE) 
-        bnsm$Up_Limit <- max(bnsm$val, na.rm = TRUE) 
+        bnsm$Stressor <- stressor_name
+        bnsm$Stressor_cat <- stressor_name
+        bnsm$Mean <- bnsm$val
+        bnsm$SD <- 0
+        bnsm$Distribution <- "normal"
+        bnsm$Low_Limit <- min(bnsm$val, na.rm = TRUE)
+        bnsm$Up_Limit <- max(bnsm$val, na.rm = TRUE)
         bnsm$Comments <- NA
-        bnsm <- bnsm[, colnames(session$userData$rv_stressor_magnitude$sm_dat)]
-        
+
+        # Only select columns that exist in both bnsm and sm_dat to ensure compatibility
+        sm_cols <- colnames(session$userData$rv_stressor_magnitude$sm_dat)
+        cols_to_use <- intersect(sm_cols, colnames(bnsm))
+        bnsm <- bnsm[, cols_to_use]
+
         # Merge onto master sm data
         session$userData$rv_stressor_magnitude$sm_dat <- rbind(
           session$userData$rv_stressor_magnitude$sm_dat,
           bnsm
         )
-        
+
+        # When save is successful, render a green success message
+        showNotification("New Stressor and Stressor-Response relationship was created!",
+                         type = "default",
+                         duration = 5)
+
         # End of data addition....
       }
-      
-      
-      # When the button is pressed, render a green success message
-        showNotification("New Stressor and Stressor-Response relationship was created!", 
-                         type = "default", 
-                         duration = 5)  # The message will disappear after 3 seconds
-      
+
     })
     
     
