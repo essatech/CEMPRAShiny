@@ -1,68 +1,130 @@
 module_matrix_model_inputs_ui <- function(id) {
   ns <- NS(id)
-  
+
   tagList(
-    # Global file upload and basic inputs
-    fluidRow(
-      column(
-        width = 6,
-        tags$p("Load Life Cycles Profile File: Vital Rates"),
-        fileInput(
-          ns("up_vital2"),
-          label = "life cycles.csv",
-          multiple = FALSE,
-          accept = c(".csv")
-        )
-      ),
-      column(
-        width = 6,
-        tags$p("(Optional) Load Habitat Capacities"),
-        fileInput(
-          ns("up_habitat_capacities"),
-          label = "habitat_capacities.csv",
-          multiple = FALSE,
-          accept = c(".csv")
-        )
-      )
-    ),
-    
-    
-    fluidRow(
-      column(
-        width = 6,
-        numericInput(ns("Nstage"), label = "Nstage (# Stages)", value = life_stages$Value[life_stages$Name == "Nstage"])
-      ),
-      column(
-        width = 6,
-        checkboxInput(
-          ns("anadromous"),
-          label = "Does your species follow an anadromous life history (Yes/checked = semelparous for salmon; No/unchecked = iteroparous for trout etc.)",
-          value = life_stages$Value[life_stages$Name == "anadromous"]
-        )
-      )
-    ),
-    div(style = "color: #ffffff; background: #ff000059; border-radius: 5px; margin: 5px;", textOutput(ns(
-      "upload_error_msg_vitals"
-    ))),
-    
-    tags$br(),
-    
     # Tabbed Panels for the various model inputs
     tabsetPanel(
-      ## Sample Data
-      tabPanel("Overview", model_matrix_overview_ui(ns(
-        "model_matrix_overview"
-      ))),
-      
+      ## Upload Data Tab (first tab)
+      tabPanel(
+        "Upload Data",
+        tags$br(),
+
+        tags$p(
+          "Upload your life cycle profile and habitat capacities files here. These files define the vital rates
+          and density-dependent constraints for your population model. Changes made here will update parameters
+          across all other tabs.",
+          class = "pm-ht"
+        ),
+
+        shinydashboard::box(
+          width = 12,
+          title = "Life Cycle Profile",
+          collapsible = TRUE,
+          collapsed = FALSE,
+
+          fluidRow(
+            column(
+              width = 6,
+              tags$p("Load Life Cycles Profile File: Vital Rates"),
+              fileInput(
+                ns("up_vital2"),
+                label = "life cycles.csv",
+                multiple = FALSE,
+                accept = c(".csv")
+              )
+            ),
+            column(
+              width = 6,
+              tags$p(
+                tags$strong("Nstage"), " - Number of life stages in your model (1-10).",
+                class = "pm-ht"
+              ),
+              numericInput(ns("Nstage"), label = "Nstage (# Stages)", value = life_stages$Value[life_stages$Name == "Nstage"])
+            )
+          ),
+
+          fluidRow(
+            column(
+              width = 12,
+              checkboxInput(
+                ns("anadromous"),
+                label = "Does your species follow an anadromous life history (Yes/checked = semelparous for salmon; No/unchecked = iteroparous for trout etc.)",
+                value = life_stages$Value[life_stages$Name == "anadromous"]
+              )
+            )
+          ),
+
+          div(style = "color: #ffffff; background: #ff000059; border-radius: 5px; margin: 5px;", textOutput(ns(
+            "upload_error_msg_vitals"
+          )))
+        ),
+
+        shinydashboard::box(
+          width = 12,
+          title = "Habitat Capacities",
+          collapsible = TRUE,
+          collapsed = FALSE,
+
+          tags$p(
+            "Upload location-specific carrying capacities for density-dependent constraints.
+            This file is optional but recommended if you have habitat data.",
+            class = "pm-ht"
+          ),
+
+          fluidRow(
+            column(
+              width = 6,
+              fileInput(
+                ns("up_habitat_capacities"),
+                label = "habitat_capacities.csv",
+                multiple = FALSE,
+                accept = c(".csv")
+              )
+            )
+          )
+        ),
+
+        tags$br()
+      ),
+
       ## Survival Parameters Tab
       tabPanel(
         "Survival",
-        
+
         tags$br(),
         tags$p(
-          "Define the individual survivorship probabilities for each stage class evaluated on annual time steps in the simulation.",
+          "Define the individual survivorship probabilities for each stage class evaluated on annual time steps in the simulation.
+          These represent density-independent survival rates; density-dependent constraints are configured separately in the Density Dependence tab.",
           class = "pm-ht"
         ),
+
+        # Conditional explanatory text for non-anadromous mode
+        conditionalPanel(
+          condition = sprintf("input['%s'] == false", ns("anadromous")),
+          tags$div(
+            style = "background-color: #f0f7fb; border-left: 4px solid #3c8dbc; padding: 10px; margin-bottom: 15px;",
+            tags$strong("Non-Anadromous Mode: "),
+            tags$span(
+              "SE (egg survival) and S0 (fry survival) govern early life transitions incorporated into the fecundity term.
+              surv_1 through surv_N represent annual stage-to-stage transition probabilities. Individuals may spend
+              multiple years in each stage (configured in the Growth tab), with survival applied each year."
+            )
+          )
+        ),
+
+        # Conditional explanatory text for anadromous mode
+        conditionalPanel(
+          condition = sprintf("input['%s'] == true", ns("anadromous")),
+          tags$div(
+            style = "background-color: #fef9e7; border-left: 4px solid #f39c12; padding: 10px; margin-bottom: 15px;",
+            tags$strong("Anadromous Mode: "),
+            tags$span(
+              "SE (egg-to-fry survival) and S0 (fry to age-1) govern transitions from age-0 to age-1. surv_1 typically represents survival from age-1 to age-2. Subsequent surv_X values govern pre-breeder (Pb) marine survival between age classes. For salmon,
+              we recommend an age-based model where each stage equals one year (all year_X = 1 in Growth tab)."
+            )
+          )
+        ),
+
         # Survival probabilities
         fluidRow(
           column(
@@ -120,114 +182,152 @@ module_matrix_model_inputs_ui <- function(id) {
             numericInput(ns("surv_10"), label = "surv_10 (Stage 10 Survival)", value = life_stages$Value[life_stages$Name == "surv_10"])
           )
         ),
-        # Anadromous survival parameters (spawner migration and pre-spawn)
-        tags$h5("Spawning Migration Survival (for anadromous life histories)"),
-        fluidRow(
-          column(
-            width = 3,
-            numericInput(ns("smig_1"), label = "smig_1 (Mig. Surv. Age-1)", value = life_stages$Value[life_stages$Name == "smig_1"])
+        # Anadromous-only survival parameters (spawner migration and pre-spawn)
+        # Hidden when running in non-anadromous mode
+        conditionalPanel(
+          condition = sprintf("input['%s'] == true", ns("anadromous")),
+
+          tags$h5("Spawning Migration Survival (Anadromous Only)"),
+          tags$p(
+            "Control survival during migration to spawning grounds. This typically represents mortality
+            prior to when spawner enumeration can occur (e.g., in-river migration mortality).",
+            class = "pm-ht", style = "font-size: 12px; color: #666;"
           ),
-          column(
-            width = 3,
-            numericInput(ns("smig_2"), label = "smig_2 (Mig. Surv. Age-2)", value = life_stages$Value[life_stages$Name == "smig_2"])
+          fluidRow(
+            column(
+              width = 3,
+              numericInput(ns("smig_1"), label = "smig_1 (Mig. Surv. Age-1)", value = life_stages$Value[life_stages$Name == "smig_1"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("smig_2"), label = "smig_2 (Mig. Surv. Age-2)", value = life_stages$Value[life_stages$Name == "smig_2"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("smig_3"), label = "smig_3 (Mig. Surv. Age-3)", value = life_stages$Value[life_stages$Name == "smig_3"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("smig_4"), label = "smig_4 (Mig. Surv. Age-4)", value = life_stages$Value[life_stages$Name == "smig_4"])
+            )
           ),
-          column(
-            width = 3,
-            numericInput(ns("smig_3"), label = "smig_3 (Mig. Surv. Age-3)", value = life_stages$Value[life_stages$Name == "smig_3"])
+          fluidRow(
+            column(
+              width = 3,
+              numericInput(ns("smig_5"), label = "smig_5 (Mig. Surv. Age-5)", value = life_stages$Value[life_stages$Name == "smig_5"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("smig_6"), label = "smig_6 (Mig. Surv. Age-6)", value = life_stages$Value[life_stages$Name == "smig_6"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("smig_7"), label = "smig_7 (Mig. Surv. Age-7)", value = life_stages$Value[life_stages$Name == "smig_7"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("smig_8"), label = "smig_8 (Mig. Surv. Age-8)", value = life_stages$Value[life_stages$Name == "smig_8"])
+            )
           ),
-          column(
-            width = 3,
-            numericInput(ns("smig_4"), label = "smig_4 (Mig. Surv. Age-4)", value = life_stages$Value[life_stages$Name == "smig_4"])
+          fluidRow(
+            column(
+              width = 3,
+              numericInput(ns("smig_9"), label = "smig_9 (Mig. Surv. Age-9)", value = life_stages$Value[life_stages$Name == "smig_9"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("smig_10"), label = "smig_10 (Mig. Surv. Age-10)", value = life_stages$Value[life_stages$Name == "smig_10"])
+            )
+          ),
+
+          tags$h5("Pre-spawn Survival (Anadromous Only)"),
+          tags$p(
+            "Represent mortality after spawning enumeration occurs but before successful reproduction
+            (e.g., prespawn mortality, effective spawners). Set to 1.0 if unknown.",
+            class = "pm-ht", style = "font-size: 12px; color: #666;"
+          ),
+          fluidRow(
+            column(
+              width = 3,
+              numericInput(ns("u_1"), label = "u_1 (Pre. Spwn. Surv. Age-1)", value = life_stages$Value[life_stages$Name == "u_1"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("u_2"), label = "u_2 (Pre. Spwn. Surv. Age-2)", value = life_stages$Value[life_stages$Name == "u_2"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("u_3"), label = "u_3 (Pre. Spwn. Surv. Age-3)", value = life_stages$Value[life_stages$Name == "u_3"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("u_4"), label = "u_4 (Pre. Spwn. Surv. Age-4)", value = life_stages$Value[life_stages$Name == "u_4"])
+            )
+          ),
+          fluidRow(
+            column(
+              width = 3,
+              numericInput(ns("u_5"), label = "u_5 (Pre. Spwn. Surv. Age-5)", value = life_stages$Value[life_stages$Name == "u_5"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("u_6"), label = "u_6 (Pre. Spwn. Surv. Age-6)", value = life_stages$Value[life_stages$Name == "u_6"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("u_7"), label = "u_7 (Pre. Spwn. Surv. Age-7)", value = life_stages$Value[life_stages$Name == "u_7"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("u_8"), label = "u_8 (Pre. Spwn. Surv. Age-8)", value = life_stages$Value[life_stages$Name == "u_8"])
+            )
+          ),
+          fluidRow(
+            column(
+              width = 3,
+              numericInput(ns("u_9"), label = "u_9 (Pre. Spwn. Surv. Age-9)", value = life_stages$Value[life_stages$Name == "u_9"])
+            ),
+            column(
+              width = 3,
+              numericInput(ns("u_10"), label = "u_10 (Pre. Spwn. Surv. Age-10)", value = life_stages$Value[life_stages$Name == "u_10"])
+            )
           )
+        ),  # end conditionalPanel for anadromous-only parameters
+
+        tags$h5("Stochastic Survival Parameters"),
+        tags$p(
+          "These parameters control interannual variability in survival rates across simulations.
+          Higher values increase volatility in population projections, useful for assessing population
+          viability and extinction risk under environmental uncertainty.",
+          class = "pm-ht", style = "font-size: 12px; color: #666;"
         ),
-        fluidRow(
-          column(
-            width = 3,
-            numericInput(ns("smig_5"), label = "smig_5 (Mig. Surv. Age-5)", value = life_stages$Value[life_stages$Name == "smig_5"])
-          ),
-          column(
-            width = 3,
-            numericInput(ns("smig_6"), label = "smig_6 (Mig. Surv. Age-6)", value = life_stages$Value[life_stages$Name == "smig_6"])
-          ),
-          column(
-            width = 3,
-            numericInput(ns("smig_7"), label = "smig_7 (Mig. Surv. Age-7)", value = life_stages$Value[life_stages$Name == "smig_7"])
-          ),
-          column(
-            width = 3,
-            numericInput(ns("smig_8"), label = "smig_8 (Mig. Surv. Age-8)", value = life_stages$Value[life_stages$Name == "smig_8"])
-          )
-        ),
-        fluidRow(
-          column(
-            width = 3,
-            numericInput(ns("smig_9"), label = "smig_9 (Mig. Surv. Age-9)", value = life_stages$Value[life_stages$Name == "smig_9"])
-          ),
-          column(
-            width = 3,
-            numericInput(ns("smig_10"), label = "smig_10 (Mig. Surv. Age-10)", value = life_stages$Value[life_stages$Name == "smig_10"])
-          )
-        ),
-        tags$h5("Pre-spawn Survival (for anadromous life histories)"),
-        fluidRow(
-          column(
-            width = 3,
-            numericInput(ns("u_1"), label = "u_1 (Pre. Spwn. Surv. Age-1)", value = life_stages$Value[life_stages$Name == "u_1"])
-          ),
-          column(
-            width = 3,
-            numericInput(ns("u_2"), label = "u_2 (Pre. Spwn. Surv. Age-2)", value = life_stages$Value[life_stages$Name == "u_2"])
-          ),
-          column(
-            width = 3,
-            numericInput(ns("u_3"), label = "u_3 (Pre. Spwn. Surv. Age-3)", value = life_stages$Value[life_stages$Name == "u_3"])
-          ),
-          column(
-            width = 3,
-            numericInput(ns("u_4"), label = "u_4 (Pre. Spwn. Surv. Age-4)", value = life_stages$Value[life_stages$Name == "u_4"])
-          )
-        ),
-        fluidRow(
-          column(
-            width = 3,
-            numericInput(ns("u_5"), label = "u_5 (Pre. Spwn. Surv. Age-5)", value = life_stages$Value[life_stages$Name == "u_5"])
-          ),
-          column(
-            width = 3,
-            numericInput(ns("u_6"), label = "u_6 (Pre. Spwn. Surv. Age-6)", value = life_stages$Value[life_stages$Name == "u_6"])
-          ),
-          column(
-            width = 3,
-            numericInput(ns("u_7"), label = "u_7 (Pre. Spwn. Surv. Age-7)", value = life_stages$Value[life_stages$Name == "u_7"])
-          ),
-          column(
-            width = 3,
-            numericInput(ns("u_8"), label = "u_8 (Pre. Spwn. Surv. Age-8)", value = life_stages$Value[life_stages$Name == "u_8"])
-          )
-        ),
-        fluidRow(
-          column(
-            width = 3,
-            numericInput(ns("u_9"), label = "u_9 (Pre. Spwn. Surv. Age-9)", value = life_stages$Value[life_stages$Name == "u_9"])
-          ),
-          column(
-            width = 3,
-            numericInput(ns("u_10"), label = "u_10 (Pre. Spwn. Surv. Age-10)", value = life_stages$Value[life_stages$Name == "u_10"])
-          )
-        ),
-        tags$h5("Additional Survival Parameters"),
         fluidRow(
           column(
             width = 4,
-            numericInput(ns("M.cv"), label = "M.cv (Coefficient of variation in stage-specific mortality)", value = life_stages$Value[life_stages$Name == "M.cv"])
+            numericInput(ns("M.cv"), label = "M.cv (Coefficient of variation in stage-specific mortality)", value = life_stages$Value[life_stages$Name == "M.cv"]),
+            tags$small(
+              style = "color: #888; display: block; margin-top: -10px;",
+              "Controls year-to-year variability in survival rates (beta distribution). Typical values: 0.05-0.20.
+              Higher values = more variable survival between years."
+            )
           ),
           column(
             width = 4,
-            numericInput(ns("M.rho"), label = "M.rho (Correlation in mortality through time)", value = life_stages$Value[life_stages$Name == "M.rho"])
+            numericInput(ns("M.rho"), label = "M.rho (Correlation in mortality through time)", value = life_stages$Value[life_stages$Name == "M.rho"]),
+            tags$small(
+              style = "color: #888; display: block; margin-top: -10px;",
+              "Correlation in good/bad years across stage classes (0-1). Low values = stages compensate independently.
+              High values = all cohorts experience good/bad years simultaneously, increasing volatility."
+            )
           ),
           column(
             width = 4,
-            numericInput(ns("p.cat"), label = "p.cat (Probability of catastrophic event per generation)", value = life_stages$Value[life_stages$Name == "p.cat"])
+            numericInput(ns("p.cat"), label = "p.cat (Probability of catastrophic event per generation)", value = life_stages$Value[life_stages$Name == "p.cat"]),
+            tags$small(
+              style = "color: #888; display: block; margin-top: -10px;",
+              "Annual probability of a catastrophic mortality event (e.g., disease, drought). Scaled to generation time.
+              Set to 0 to disable. Typical values: 0-0.05."
+            )
           )
         ),
         tags$h5("Sex Ratio"),
@@ -243,9 +343,40 @@ module_matrix_model_inputs_ui <- function(id) {
         "Growth",
         tags$br(),
         tags$p(
-          "Growth is represented as time (years) spent in each stage. This circumvents defining size attributes for each stage and allows for more flexibility to parameterize different species in the model.",
+          "Growth is represented as time (years) spent in each stage. This approach avoids defining size attributes
+          and allows flexibility when parameterizing different species. Stage-to-stage transition probabilities
+          account for the number of years spent in each stage.",
           class = "pm-ht"
         ),
+
+        # Conditional explanatory text for non-anadromous mode
+        conditionalPanel(
+          condition = sprintf("input['%s'] == false", ns("anadromous")),
+          tags$div(
+            style = "background-color: #f0f7fb; border-left: 4px solid #3c8dbc; padding: 10px; margin-bottom: 15px;",
+            tags$strong("Non-Anadromous Mode: "),
+            tags$span(
+              "Individuals can spend multiple years in each stage (e.g., year_4 = 5 means adults can remain
+              in stage 4 for up to 5 years). This creates a stage-structured matrix where some individuals
+              advance to the next stage while others remain. Setting all year_X = 1 creates an age-based Leslie matrix."
+            )
+          )
+        ),
+
+        # Conditional explanatory text for anadromous mode
+        conditionalPanel(
+          condition = sprintf("input['%s'] == true", ns("anadromous")),
+          tags$div(
+            style = "background-color: #fef9e7; border-left: 4px solid #f39c12; padding: 10px; margin-bottom: 15px;",
+            tags$strong("Anadromous Mode: "),
+            tags$span(
+              "For salmon and other anadromous species, we strongly recommend setting all year_X values to 1,
+              creating an age-based Leslie matrix where each stage represents exactly one year of age.
+              This simplifies interpretation and avoids confusion with pre-breeder (Pb) and breeder (B) pathways."
+            )
+          )
+        ),
+
         fluidRow(
           column(
             width = 3,
@@ -300,23 +431,100 @@ module_matrix_model_inputs_ui <- function(id) {
         "Reproduction",
         tags$br(),
         tags$p(
-          "The primary reproduction parameters include the spawning events per female, eggs per female spawner and variation in eggs per female.",
+          "Configure reproduction parameters including fecundity (eggs per female), maturity schedules,
+          and sex ratio. The fecundity element of the matrix incorporates egg survival (SE) and fry survival (S0)
+          from the Survival tab.",
           class = "pm-ht"
         ),
+
+        # Conditional explanatory text for non-anadromous mode
+        conditionalPanel(
+          condition = sprintf("input['%s'] == false", ns("anadromous")),
+          tags$div(
+            style = "background-color: #f0f7fb; border-left: 4px solid #3c8dbc; padding: 10px; margin-bottom: 15px;",
+            tags$strong("Non-Anadromous Mode: "),
+            tags$span(
+              "For iteroparous species (trout, char, etc.), mature individuals can reproduce multiple times.
+              Set mat_X to define the proportion mature at each stage (e.g., mat_4 = 1 means 100% of stage-4
+              individuals are mature). Use a single eps value for mean eggs per female, or specify eps_X for
+              stage-specific fecundity if larger/older fish produce more eggs."
+            )
+          )
+        ),
+
+        # Conditional explanatory text for anadromous mode
+        conditionalPanel(
+          condition = sprintf("input['%s'] == true", ns("anadromous")),
+          tags$div(
+            style = "background-color: #fef9e7; border-left: 4px solid #f39c12; padding: 10px; margin-bottom: 15px;",
+            tags$strong("Anadromous Mode: "),
+            tags$span(
+              "For semelparous salmon, mat_X defines the probability of returning to spawn at each age
+              (e.g., mat_3 = 0.15, mat_4 = 0.70, mat_5 = 1.0). The oldest age class should have mat = 1.0.
+              Use age-specific fecundity (eps_3, eps_4, eps_5) since older/larger fish typically produce more eggs.
+              Configure spawner migration (smig_X) and prespawn survival (u_X) in Review Inputs if needed."
+            )
+          )
+        ),
+
         fluidRow(
           column(
             width = 4,
-            numericInput(ns("events"), label = "events (Spawn Events per Female)", value = life_stages$Value[life_stages$Name == "events"])
+            numericInput(ns("events"), label = "events (Spawn Events per Female)", value = life_stages$Value[life_stages$Name == "events"]),
+            tags$small(
+              style = "color: #888; display: block; margin-top: -10px;",
+              "Number of spawning events per female per year. Almost always set to 1. Keep at 1 even for systems
+              with multiple life history variants (e.g., Spring & Fall Chinook) - use separate profiles instead."
+            )
           ),
           column(
             width = 4,
-            numericInput(ns("eps_sd"), label = "eps_sd (SD variation in Eggs per Female)", value = life_stages$Value[life_stages$Name == "eps_sd"])
+            numericInput(ns("eps_sd"), label = "eps_sd (SD variation in Eggs per Female)", value = life_stages$Value[life_stages$Name == "eps_sd"]),
+            tags$small(
+              style = "color: #888; display: block; margin-top: -10px;",
+              "Standard deviation in eggs-per-spawner across years and replicates. Controls fecundity variability.
+              Higher values create more variable recruitment. Density-dependent constraints may attenuate effects."
+            )
           )
         ),
+
+        tags$hr(style = "margin-top: 25px; margin-bottom: 20px; border-top: 1px solid #ddd;"),
+
+        tags$h5("Eggs per Female Spawner (Fecundity)"),
         tags$p(
-          "Eggs per female spawner (eps) per mature individual for each age class.",
+          "Eggs per female spawner (eps) per mature individual for each stage/age class. Values represent
+          the average number of eggs produced by a spawning female.",
           class = "pm-ht"
         ),
+
+        # Conditional explanatory text for eps - non-anadromous
+        conditionalPanel(
+          condition = sprintf("input['%s'] == false", ns("anadromous")),
+          tags$div(
+            style = "background-color: #f0f7fb; border-left: 4px solid #3c8dbc; padding: 10px; margin-bottom: 15px;",
+            tags$strong("Non-Anadromous: "),
+            tags$span(
+              "Typically only one eps value is needed (e.g., eps_4 if stage 4 is the first mature stage).
+              Set eps to 0 for immature stages. If fecundity increases with age/size, you can specify
+              different values for each mature stage."
+            )
+          )
+        ),
+
+        # Conditional explanatory text for eps - anadromous
+        conditionalPanel(
+          condition = sprintf("input['%s'] == true", ns("anadromous")),
+          tags$div(
+            style = "background-color: #fef9e7; border-left: 4px solid #f39c12; padding: 10px; margin-bottom: 15px;",
+            tags$strong("Anadromous: "),
+            tags$span(
+              "Use age-specific fecundity values (eps_3, eps_4, eps_5, etc.) since older/larger salmon
+              typically produce more eggs. Set eps to 0 for ages that don't spawn. Fecundity is multiplied
+              by the maturity schedule (mat_X) to determine reproductive contribution."
+            )
+          )
+        ),
+
         fluidRow(
           column(
             width = 3,
@@ -363,24 +571,79 @@ module_matrix_model_inputs_ui <- function(id) {
             numericInput(ns("eps_10"), label = "eps_10 (Stage 10)", value = life_stages$Value[life_stages$Name == "eps_10"])
           )
         ),
+        tags$h5("Fecundity Variability and Spawning Interval"),
         tags$p(
-          "Egg fecundity correlation through time and spawning interval.",
-          class = "pm-ht"
+          "These parameters control temporal correlation in fecundity and the spawning schedule.",
+          class = "pm-ht", style = "font-size: 12px; color: #666;"
         ),
         fluidRow(
           column(
             width = 6,
-            numericInput(ns("egg_rho"), label = "egg_rho (Correlation in egg fecundity through time)", value = life_stages$Value[life_stages$Name == "egg_rho"])
+            numericInput(ns("egg_rho"), label = "egg_rho (Correlation in egg fecundity through time)", value = life_stages$Value[life_stages$Name == "egg_rho"]),
+            tags$small(
+              style = "color: #888; display: block; margin-top: -10px;",
+              "Correlation in fecundity between age classes within a year (0-1). If multiple mature stages contribute
+              to spawning, this controls whether good/bad years are synchronized across age classes. Low values allow
+              cohorts to compensate for each other; high values increase population volatility."
+            )
           ),
           column(
             width = 6,
-            numericInput(ns("int"), label = "int (Spawning Interval - years)", value = life_stages$Value[life_stages$Name == "int"])
+            numericInput(ns("int"), label = "int (Spawning Interval - years)", value = life_stages$Value[life_stages$Name == "int"]),
+            tags$small(
+              style = "color: #888; display: block; margin-top: -10px;",
+              "Spawning interval in years. Almost always set to 1 (annual spawning). Values >1 indicate that mature
+              individuals skip years between spawning events. Proceed with caution if using values other than 1."
+            )
           )
         ),
+
+        tags$hr(style = "margin-top: 25px; margin-bottom: 20px; border-top: 1px solid #ddd;"),
+
+        tags$h5("Maturity Schedule"),
         tags$p(
-          "The probability (portion) that an individual is sexually mature in each stage class.",
+          "The probability (proportion 0-1) that an individual is sexually mature at each stage/age class.
+          This determines which stages contribute to reproduction in the population matrix.",
           class = "pm-ht"
         ),
+
+        # Conditional explanatory text for maturity - non-anadromous
+        conditionalPanel(
+          condition = sprintf("input['%s'] == false", ns("anadromous")),
+          tags$div(
+            style = "background-color: #f0f7fb; border-left: 4px solid #3c8dbc; padding: 10px; margin-bottom: 15px;",
+            tags$strong("Non-Anadromous: "),
+            tags$span(
+              "Set mat_X = 0 for juvenile stages and mat_X = 1 for fully mature stages. Intermediate values
+              (e.g., mat_3 = 0.5) indicate partial maturity where only a fraction of individuals in that stage
+              reproduce. For iteroparous species, mature individuals can spawn in multiple consecutive years."
+            ),
+            tags$div(
+              style = "margin-top: 8px; font-style: italic; color: #666;",
+              "Example (5-stage trout): mat_1 = 0, mat_2 = 0, mat_3 = 0, mat_4 = 0.5, mat_5 = 1.0"
+            )
+          )
+        ),
+
+        # Conditional explanatory text for maturity - anadromous
+        conditionalPanel(
+          condition = sprintf("input['%s'] == true", ns("anadromous")),
+          tags$div(
+            style = "background-color: #fef9e7; border-left: 4px solid #f39c12; padding: 10px; margin-bottom: 15px;",
+            tags$strong("Anadromous: "),
+            tags$span(
+              "For salmon, mat_X represents the probability of returning to spawn at each age. Values should
+              sum conceptually to account for all fish eventually spawning. The oldest mature age class should
+              have mat = 1.0 (all remaining fish spawn). Earlier ages have lower values representing the
+              proportion that return early vs. stay at sea."
+            ),
+            tags$div(
+              style = "margin-top: 8px; font-style: italic; color: #666;",
+              "Example (Chinook, ages 3-5 spawn): mat_1 = 0, mat_2 = 0, mat_3 = 0.15, mat_4 = 0.70, mat_5 = 1.0"
+            )
+          )
+        ),
+
         fluidRow(
           column(
             width = 3,
@@ -434,21 +697,147 @@ module_matrix_model_inputs_ui <- function(id) {
       tabPanel(
         "Density Dependence",
         tags$br(),
-        
+
+        # Dynamic warning alerts for DD configuration issues
+        uiOutput(ns("dd_config_warnings")),
+
+        # Overview section
         shinydashboard::box(
           width = 12,
-          
+          title = "About Density Dependence",
+          collapsible = TRUE,
+          collapsed = FALSE,
+
+          tags$p(
+            "It is rare for natural populations to grow in perpetuity without any constraints on growth, survival, and reproduction.
+            The life cycle model includes mechanisms to constrain population growth or limit high densities through ",
+            tags$strong("density-dependent bottlenecks"), ".",
+            class = "pm-ht"
+          ),
+
+          tags$p(
+            "The CEMPRA tool has two mechanisms to incorporate density-dependent growth constraints:",
+            class = "pm-ht"
+          ),
+
+          tags$ol(
+            tags$li(
+              tags$strong("Location and Stage-Specific Carrying Capacities (Recommended):"),
+              " Use this approach when you have habitat data and can estimate maximum densities for specific life stages
+              (e.g., 'Location X can produce up to 1,200 parr'). This provides an intuitive workflow with Beverton-Holt
+              or Hockey-Stick functions."
+            ),
+            tags$li(
+              tags$strong("Compensation Ratios:"),
+              " An alternative approach that allows evaluation without specifying location-specific habitat availability.
+              Uses adult carrying capacity and back-calculates stage-specific K values via stable-stage distribution.
+              Recommended only for users familiar with compensation ratios in population ecology."
+            )
+          ),
+
+          tags$details(
+            tags$summary(
+              style = "cursor: pointer; color: #337ab7; font-weight: bold; margin-top: 10px;",
+              "Learn more about density-dependent growth..."
+            ),
+            tags$div(
+              style = "padding: 10px; background-color: #f9f9f9; border-radius: 4px; margin-top: 10px;",
+              tags$p(
+                "Both mechanisms utilize the ", tags$strong("Beverton-Holt function"), " or a strict ",
+                tags$strong("Hockey-Stick"), " threshold to constrain transitions at key demographic bottlenecks."
+              ),
+              tags$p(
+                tags$strong("Beverton-Holt Function:"), " Calculates expected individuals in the next time step as a
+                function of current abundance, carrying capacity (K), and baseline survival (S). As population approaches K,
+                recruitment flattens asymptotically."
+              ),
+              tags$p(
+                tags$strong("Hockey-Stick:"), " A simpler hard-cap approach where abundance cannot exceed K, regardless of productivity."
+              ),
+              tags$p(
+                "For more details, see ",
+                tags$a(href = "https://mattjbayly.github.io/CEMPRA_documentation/07_life_cycle_model.html#density-dependent-constraints-on-growth",
+                       target = "_blank", "Chapter 7: Density-Dependent Constraints"),
+                " in the CEMPRA documentation."
+              )
+            )
+          )
+        ),
+
+        # Location-Specific Carrying Capacities Section
+        shinydashboard::box(
+          width = 12,
+
           tags$h3(
             "Define Density Dependence with Location-Specific Carrying Capacities"
           ),
-          
-          
-          module_matrix_dd_config_ui(ns("dd_config")),
-          
+
+          tags$p(
+            "This is the ", tags$strong("recommended approach"), " for most applications. Define which life stages have
+            density-dependent bottlenecks and specify location-specific carrying capacities for each stage.",
+            class = "pm-ht"
+          ),
+
+          tags$details(
+            tags$summary(
+              style = "cursor: pointer; color: #337ab7; font-weight: bold;",
+              "Learn more about setting up location-specific capacities..."
+            ),
+            tags$div(
+              style = "padding: 10px; background-color: #f9f9f9; border-radius: 4px; margin-top: 10px;",
+
+              tags$h5("Step 1: Define Density-Dependent Bottlenecks"),
+              tags$p("Use the controls below to specify which life stages have density-dependent constraints and which function to use:"),
+
+              tags$table(
+                class = "table table-sm table-bordered",
+                style = "font-size: 12px; margin-bottom: 15px;",
+                tags$thead(
+                  tags$tr(
+                    tags$th("Name Tag", style = "width: 25%;"),
+                    tags$th("Mechanism", style = "width: 20%;"),
+                    tags$th("Description")
+                  )
+                ),
+                tags$tbody(
+                  tags$tr(tags$td("bh_stage_0"), tags$td("Beverton-Holt"), tags$td("Egg-to-fry transition limiting max fry")),
+                  tags$tr(tags$td("hs_stage_0"), tags$td("Hockey-Stick"), tags$td("Hard cap on fry abundance")),
+                  tags$tr(tags$td("bh_stage_1, bh_stage_2, ..."), tags$td("Beverton-Holt"), tags$td("Stage transitions with BH constraint")),
+                  tags$tr(tags$td("hs_stage_1, hs_stage_2, ..."), tags$td("Hockey-Stick"), tags$td("Hard cap at each stage")),
+                  tags$tr(tags$td("bh_spawners"), tags$td("Beverton-Holt"), tags$td("Total spawner capacity constraint")),
+                  tags$tr(tags$td("hs_spawners"), tags$td("Hockey-Stick"), tags$td("Hard cap on total spawners"))
+                )
+              ),
+
+              tags$p(
+                tags$em("For anadromous species:"),
+                " Use 'pb' (pre-breeder) or 'b' (breeder) suffixes, e.g., bh_stage_pb_1, bh_stage_b_3, etc."
+              ),
+
+              tags$h5("Step 2: Define Location-Specific K Values", style = "margin-top: 15px;"),
+              tags$p("The habitat capacities table below specifies maximum individuals per stage per location. Required columns:"),
+              tags$ul(
+                tags$li(tags$code("HUC_ID"), " / ", tags$code("NAME"), ": Location identifiers"),
+                tags$li(tags$code("k_stage_0_mean"), ": Fry carrying capacity"),
+                tags$li(tags$code("k_stage_1_mean"), ", ", tags$code("k_stage_2_mean"), ", ...: Stage-specific capacities"),
+                tags$li(tags$code("k_spawners_mean"), ": Total spawner capacity (anadromous)")
+              ),
+
+              tags$p(
+                tags$a(href = "https://mattjbayly.github.io/CEMPRA_documentation/07_life_cycle_model.html#location-and-stage-specific-carrying-capacities",
+                       target = "_blank", "See full documentation with examples...")
+              )
+            )
+          ),
+
           tags$br(),
-          
-          module_matrix_dd_cap_ui(ns("dd_cap")),
-          
+
+          module_matrix_dd_config_ui(ns("dd_config")),
+
+          tags$br(),
+
+          module_matrix_dd_cap_ui(ns("dd_cap"))
+
         ),
         
         tags$br(),
@@ -456,26 +845,68 @@ module_matrix_model_inputs_ui <- function(id) {
         
         shinydashboard::box(
           width = 12,
-          
+
           tags$h3("(Optional) Define Density Dependence with Compensation Ratios"),
-          
-          
-          
+
           tags$p(
-            "The adult carrying capacity will determine the mean number of adults during the simulation. Abundance estimates for other life stages are back-calculated such that the adult carrying capacity is achieved.",
+            tags$em("Note: This approach is only recommended for advanced users familiar with compensation ratios in population ecology.
+            For most applications, use the Location-Specific Carrying Capacities approach above."),
+            style = "color: #856404; background-color: #fff3cd; padding: 10px; border-radius: 4px; margin-bottom: 15px;"
+          ),
+
+          tags$details(
+            tags$summary(
+              style = "cursor: pointer; color: #337ab7; font-weight: bold;",
+              "Learn more about compensation ratios..."
+            ),
+            tags$div(
+              style = "padding: 10px; background-color: #f9f9f9; border-radius: 4px; margin-top: 10px; margin-bottom: 15px;",
+
+              tags$p(
+                "Compensation ratios (CR) express density-dependent survival as a multiplier that varies with population density.
+                Each life stage can have its own compensation ratio, which determines how strongly survival decreases as density increases."
+              ),
+
+              tags$p(
+                tags$strong("How it works:"), " The formula is: ",
+                tags$code("S_dd = S * (CR / (1 + (CR - 1) * (N / K)))"),
+                " where S is baseline survival, CR is the compensation ratio, N is current abundance, and K is carrying capacity."
+              ),
+
+              tags$ul(
+                tags$li(tags$strong("CR = 1:"), " No density dependence (survival is constant)"),
+                tags$li(tags$strong("CR > 1:"), " Density-dependent survival that decreases as N approaches K"),
+                tags$li(tags$strong("Higher CR:"), " Stronger density-dependent effect")
+              ),
+
+              tags$p(
+                tags$strong("Important:"), " When using this approach, the fry survival rate (s0.1.det) will be automatically
+                optimized to achieve population equilibrium (lambda = 1.0) at carrying capacity K. Stage-specific K values
+                are back-calculated from the adult K using the stable-stage distribution."
+              ),
+
+              tags$p(
+                tags$a(href = "https://mattjbayly.github.io/CEMPRA_documentation/07_life_cycle_model.html#compensation-ratios",
+                       target = "_blank", "See full documentation on compensation ratios...")
+              )
+            )
+          ),
+
+          tags$p(
+            "Set the adult carrying capacity (K) to define the mean equilibrium abundance of adults in the simulation.
+            Carrying capacities for other life stages are derived from K using the stable-stage distribution.",
             class = "pm-ht"
           ),
           fluidRow(column(
             width = 12,
             numericInput(ns("k"), label = "(K) - Adult Carrying Capacity (for compensation ratios)", value = life_stages$Value[life_stages$Name == "k"])
           )),
-          
+
           tags$br(),
-          
-          
-          
+
           tags$p(
-            "Compensation ratios for density dependent growth. Density dependence is introduced as compensatory density dependence with a fixed adult carrying capacity.",
+            "Specify compensation ratios for each life stage. Values greater than 1 activate density dependence for that stage.
+            Leave at 1 for stages without density-dependent survival.",
             class = "pm-ht"
           ),
           fluidRow(
@@ -540,12 +971,31 @@ module_matrix_model_inputs_ui <- function(id) {
       ),
       # end Density Dependence tab
       
-      tabPanel("All Inputs", module_matrix_life_cycle_params_ui(
+      tabPanel("Review Inputs", module_matrix_life_cycle_params_ui(
         ns("module_matrix_life_cycle_params")
-      ))
-      
-      
-      
+      )),
+
+      ## Run Model Tab (styled red)
+      tabPanel(
+        title = tags$span("Run Population Model", style = "color: #d9534f; font-weight: bold;"),
+        tags$br(),
+
+        tags$p(
+          "Run population projections with your configured life cycle parameters and density-dependent constraints.
+          Select a location to load stressor values, adjust parameters as needed, then run the projection.",
+          class = "pm-ht"
+        ),
+
+        # Population Projection Preview content (moved from sidebar)
+        module_matrix_model_preview_ui(ns("mm_preview"))
+      ),
+
+      ## Results Tab (moved to end, styled red)
+      tabPanel(
+        title = tags$span("Compare Scenario Results", style = "color: #d9534f; font-weight: bold;"),
+        model_matrix_overview_ui(ns("model_matrix_overview"))
+      )
+
     )  # end tabsetPanel
   )
 }
@@ -676,11 +1126,162 @@ module_matrix_model_inputs_server <- function(id) {
     
     # Call the DD cap module
     module_matrix_dd_cap_server("dd_cap", anadromous = anadromous_reactive, Nstage = Nstage_reactive)
-    
+
     model_matrix_overview_server("model_matrix_overview")
-    
-    
-    
+
+    # Call the population projection preview module server
+    print("Load module_matrix_model_preview_server...")
+    module_matrix_model_preview_server("mm_preview")
+
+
+    #--------------------------------------
+    # DD Configuration Warnings (explain_dd_settings)
+    #--------------------------------------
+
+    # Reactive to run explain_dd_settings() when inputs change
+    dd_explanation <- reactive({
+      # Get life cycle data
+      life_cycles <- session$userData$rv_life_stages$dat
+
+      # Get habitat capacity data
+      habitat_dd_k <- session$userData$rv_hab_densities$dat
+
+      # Return NULL if no life cycle data
+      if (is.null(life_cycles) || nrow(life_cycles) == 0) {
+        return(NULL)
+      }
+
+      # Prepare habitat_dd_k - check if it has data
+      if (!is.null(habitat_dd_k) && nrow(habitat_dd_k) > 0) {
+        # Use first HUC_ID for explanation (representative)
+        # Find the HUC_ID column (could be named differently) - case insensitive
+        col_names <- names(habitat_dd_k)
+        huc_col_idx <- grep("^huc_id$|^huc$|^id$|^location$",
+                            tolower(col_names))[1]
+        if (!is.na(huc_col_idx)) {
+          huc_col <- col_names[huc_col_idx]  # Get actual column name with original case
+          huc_id <- as.character(habitat_dd_k[[huc_col]][1])
+        } else {
+          huc_id <- NULL
+          habitat_dd_k <- NULL
+        }
+      } else {
+        habitat_dd_k <- NULL
+        huc_id <- NULL
+      }
+
+      # Run explain_dd_settings (suppress console output)
+      tryCatch({
+        result <- CEMPRA::explain_dd_settings(
+          life_cycles = life_cycles,
+          habitat_dd_k = habitat_dd_k,
+          HUC_ID = huc_id,
+          verbose = FALSE
+        )
+        return(result)
+      }, error = function(e) {
+        # Return NULL on error to avoid crashing
+        return(NULL)
+      })
+    })
+
+    # Render DD configuration warnings
+    output$dd_config_warnings <- renderUI({
+      explanation <- dd_explanation()
+
+      if (is.null(explanation)) {
+        return(NULL)
+      }
+
+      # Collect all non-NULL notes and warnings
+      alerts <- list()
+
+      # Check s0_details$note
+      if (!is.null(explanation$s0_details$note) &&
+          nchar(explanation$s0_details$note) > 0) {
+        alerts$s0 <- list(
+          title = "S0 Optimization Note",
+          message = explanation$s0_details$note,
+          type = "info"
+        )
+      }
+
+      # Check bh_dd_stages$note
+      if (!is.null(explanation$bh_dd_stages$note) &&
+          nchar(explanation$bh_dd_stages$note) > 0) {
+        alerts$bh_dd <- list(
+          title = "Density-Dependence Configuration Issue",
+          message = explanation$bh_dd_stages$note,
+          type = "warning"
+        )
+      }
+
+      # Check k_values$note
+      if (!is.null(explanation$k_values$note) &&
+          nchar(explanation$k_values$note) > 0) {
+        alerts$k_values <- list(
+          title = "Habitat Capacity Configuration Issue",
+          message = explanation$k_values$note,
+          type = "warning"
+        )
+      }
+
+      # Check warnings
+      if (length(explanation$warnings) > 0 &&
+          !all(sapply(explanation$warnings, function(x) is.null(x) || nchar(x) == 0))) {
+        alerts$warnings <- list(
+          title = "Configuration Warnings",
+          message = paste(explanation$warnings, collapse = " "),
+          type = "warning"
+        )
+      }
+
+      # If no alerts, return NULL
+      if (length(alerts) == 0) {
+        return(NULL)
+      }
+
+      # Create alert boxes
+      alert_ui <- lapply(alerts, function(alert) {
+        # Determine color based on type
+        bg_color <- if (alert$type == "warning") "#fff3cd" else "#cff4fc"
+        border_color <- if (alert$type == "warning") "#ffc107" else "#0dcaf0"
+        text_color <- if (alert$type == "warning") "#856404" else "#055160"
+        icon_name <- if (alert$type == "warning") "exclamation-triangle" else "info-circle"
+
+        tags$div(
+          class = "alert",
+          style = paste0(
+            "background-color: ", bg_color, "; ",
+            "border: 1px solid ", border_color, "; ",
+            "border-left: 4px solid ", border_color, "; ",
+            "border-radius: 4px; ",
+            "padding: 12px 15px; ",
+            "margin-bottom: 15px; ",
+            "color: ", text_color, ";"
+          ),
+          tags$div(
+            style = "display: flex; align-items: flex-start;",
+            tags$span(
+              shiny::icon(icon_name),
+              style = "margin-right: 10px; margin-top: 2px;"
+            ),
+            tags$div(
+              tags$strong(alert$title, style = "display: block; margin-bottom: 5px;"),
+              tags$span(alert$message, style = "font-size: 13px;")
+            )
+          )
+        )
+      })
+
+      # Return all alerts wrapped in a div
+      tags$div(
+        style = "margin-bottom: 15px;",
+        alert_ui
+      )
+    })
+
+
     #--------------------------------------
     # Upload vital rates from csv
     #--------------------------------------

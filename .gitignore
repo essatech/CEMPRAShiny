@@ -6,6 +6,9 @@
 .Rhistory
 .Rproj.user/shared/notebooks/paths
 
+claude
+.claude
+
 
 .Rproj.user/**
 .Rproj.user/

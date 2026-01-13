@@ -2,7 +2,8 @@ Shiny.addCustomMessageHandler("update_pop_model_sr_inputs", function(data) {
   console.log("Received data from R:", data);
 
   // Prefix and suffix for targeting specific inputs
-  const prefix = "matrix_model-mm_preview-";
+  // Note: Namespace updated since module moved to mm_inputs
+  const prefix = "matrix_model-mm_inputs-mm_preview-";
   const numericSuffixes = ["-pm_ps_val_mean", "-pm_ps_val_sd", "-pm_ps_val_lwr", "-pm_ps_val_upr"];
   const checkboxSuffix = "-pm_ps_check";
 

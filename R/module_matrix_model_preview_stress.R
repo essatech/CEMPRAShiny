@@ -11,62 +11,34 @@
 #'
 module_matrix_model_preview_stress_ui <- function(id) {
   ns <- NS(id)
-  
-  tagList(tags$div(fluidRow(
-    column(
-      width = 2,
-      style = "text-align: center; vertical-align: middle;",
-      checkboxInput(
-        ns("pm_ps_check"),
-        label = NULL,
-        value = FALSE,
-        width = "100px"
+
+  # Compact card-style layout for grid display
+  tags$div(
+    class = "stressor-card",
+
+    # Header with checkbox and label
+    tags$div(
+      style = "display: flex; align-items: flex-start; margin-bottom: 6px;",
+      tags$div(
+        style = "padding-top: 2px;",
+        checkboxInput(ns("pm_ps_check"), label = NULL, value = FALSE, width = "25px")
+      ),
+      tags$div(
+        style = "flex: 1; font-size: 12px; line-height: 1.3;",
+        htmlOutput(ns('pm_ps_label'))
       )
     ),
-    column(
-      width = 10,
-      shinydashboardPlus::accordion(
-        id = ns("accordion1"),
-        accordionItem(
-          title = htmlOutput(ns('pm_ps_label')),
-          color = "danger",
-          collapsed = FALSE,
-          tagList(
-            
-            # htmlOutput(ns("stressor_variable_button")),
-                       
-            fluidRow(
-              column(
-                width = 6,
-                numericInput(ns("pm_ps_val_mean"), label = "Mean", value = NULL),
-              ),
-              column(
-                width = 6,
-                numericInput(ns("pm_ps_val_sd"), label = "SD", value = NULL)
-              )
-              ),
-            
-            
-            fluidRow(
-              column(
-                width = 6,
-                numericInput(ns("pm_ps_val_lwr"), label = "Lower Lim.", value = NULL),
-              ),
-              column(
-                width = 6,
-                numericInput(ns("pm_ps_val_upr"), label = "Upper Lim.", value = NULL)
-              ),
-            )
-            # numericInput(ns("pm_ps_val_mean"), label = "Mean Value", value = NULL),
-            # numericInput(ns("pm_ps_val_sd"), label = "SD", value = NULL),
-            # numericInput(ns("pm_ps_val_lwr"), label = "Lower Limit", value = NULL),
-            # numericInput(ns("pm_ps_val_upr"), label = "Upper Limit", value = NULL)
-          ),
-        )
-      )
+
+    # Input fields in a compact 2x2 grid
+    tags$div(
+      style = "display: grid; grid-template-columns: 1fr 1fr; gap: 4px;",
+      numericInput(ns("pm_ps_val_mean"), label = "Mean", value = NULL, width = "100%"),
+      numericInput(ns("pm_ps_val_sd"), label = "SD", value = NULL, width = "100%"),
+      numericInput(ns("pm_ps_val_lwr"), label = "Lower", value = NULL, width = "100%"),
+      numericInput(ns("pm_ps_val_upr"), label = "Upper", value = NULL, width = "100%")
     )
-  )))
-  
+  )
+
 }
 
 

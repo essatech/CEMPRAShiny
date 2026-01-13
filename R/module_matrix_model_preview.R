@@ -11,62 +11,119 @@
 #'
 module_matrix_model_preview_ui <- function(id) {
   ns <- NS(id)
-  
+
   tagList(
+    # CSS for grid layout
+    tags$style(HTML("
+      .stressor-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-top: 15px;
+      }
+      .stressor-grid > div {
+        height: auto;
+      }
+      @media (max-width: 1400px) {
+        .stressor-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      @media (max-width: 1000px) {
+        .stressor-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 600px) {
+        .stressor-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .stressor-card {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 8px;
+        background-color: #fafafa;
+      }
+      .stressor-card .form-group {
+        margin-bottom: 5px;
+      }
+      .stressor-card input[type='number'] {
+        padding: 4px 8px;
+        height: 30px;
+      }
+      .stressor-card label {
+        font-size: 11px;
+        margin-bottom: 2px;
+      }
+    ")),
+
+    # Projection Settings - horizontal layout at top
     shinydashboard::box(
       width = 12,
-      tags$div(
-        class = "lam_bb",
-        tags$p(
-          "Run a time series projection preview for a hypothetical sample population",
+      title = "Projection Settings",
+      status = "danger",
+      solidHeader = TRUE,
+
+      fluidRow(
+        column(
+          width = 8,
+          tags$p(
+            "Configure and run a time series projection preview for a hypothetical sample population.
+            Select a location to load stressor values, then click Run to execute the projection.",
+            class = "pm-ht"
+          )
         ),
-        
-        fluidRow(
-          column(width = 6, numericInput(
-            ns("test_n_years"), label = "n years", value = 50
-          )),
-          column(width = 6, numericInput(
-            ns("test_n_replicates"),
-            label = "n replicates",
-            value = 10
-          ))
+        column(
+          width = 2,
+          numericInput(ns("test_n_years"), label = "Years", value = 50)
         ),
-        
-        actionButton(
-          ns("demo_projection"),
-          "Projection Population: Capacity",
-          class = "btn btn-danger",
-          style = "color:white; font-size: 20px;"
+        column(
+          width = 2,
+          numericInput(ns("test_n_replicates"), label = "Replicates", value = 10)
         )
       ),
+
+      fluidRow(
+        column(
+          width = 4,
+          selectizeInput(
+            inputId = ns("location_dropdown"),
+            label = "Choose a Location/Population:",
+            choices = NULL,
+            selected = NULL
+          )
+        ),
+        column(
+          width = 8,
+          tags$div(style = "margin-top: 25px;",
+            actionButton(
+              ns("demo_projection"),
+              "Run Population Projection",
+              class = "btn btn-danger",
+              style = "color:white; font-size: 16px;"
+            )
+          )
+        )
+      )
     ),
-    
+
+    # Stressor Magnitude Values - below projection settings
     shinydashboard::box(
       width = 12,
-      tags$div(
-        class = "demo_stressors",
-        
-        tags$div(tags$h4("Stressor Magnitude Values"), style = "text-aling: center;"),
-        tags$p(
-          "Set hypothetical stressor values for the sample population projection preview"
-        ),
-        
-        selectizeInput(
-          inputId = ns("location_dropdown"),
-          # User may select the location ID
-          label = "Choose a Location/Population:",
-          # Label for the dropdown
-          choices = NULL,
-          # Dropdown options
-          selected = NULL  # Default selected option (can also specify, e.g., "Option 1")
-        ),
-        
-        
-        # Create the stressor variable list for sandbox
-        htmlOutput(ns('stressor_variable_list_pm_sandbox')),
+      title = "Stressor Magnitude Values",
+      collapsible = TRUE,
+      collapsed = FALSE,
+
+      tags$p(
+        "Set hypothetical stressor values for the projection. Check the box next to each stressor
+        to include it in the simulation. Values are loaded from the selected location above.",
+        class = "pm-ht"
       ),
+
+      # Grid container for stressor inputs - uiOutput renders directly into this
+      uiOutput(ns('stressor_variable_list_pm_sandbox'))
     )
-    
   )
 }
 
@@ -90,24 +147,24 @@ module_matrix_model_preview_server <- function(id) {
     # ---------------------------------------------------------
     output$stressor_variable_list_pm_sandbox <- renderUI({
       print("stressor_variable_list_pm_sandbox...")
-      
+
       ms_stress <- session$userData$rv_stressor_response$main_sheet
-      
+
       # Re-trigger when session$userData$rv_stressor_magnitude$sm_dat is updated
       retrigger <- session$userData$rv_stressor_magnitude$sm_dat
-      
-      
+
+
       # Only consider stressors applicable to Population model
       ms_stress <- ms_stress[which(ms_stress$Model %in% c("Population Model", "All")), ]
-      
+
       # If there are no population-only specific stressors then return
       # an empty UI
       if (nrow(ms_stress) == 0) {
-        return()
+        return(tags$p("No stressors defined for Population Model.", class = "text-muted"))
       }
-      
+
       ms_stress_list <- list()
-      
+
       # All variables off by default
       ms_stress$check_on <- FALSE
       ms_stress$HUC_ID <- 123
@@ -117,26 +174,29 @@ module_matrix_model_preview_server <- function(id) {
       ms_stress$Distribution <- "normal"
       ms_stress$Low_Limit <- NA
       ms_stress$Up_Limit <- NA
-      
+
       session$userData$rv_sandbox_stressors$dat <- ms_stress
-      
+
       print("Stressor sandbox list in pop model is being reset...")
 
       # Call sub modules
       for (s in 1:nrow(ms_stress)) {
         this_stressor <- ms_stress[s, ]
         this_stressor_name <- this_stressor$Stressors
-        
-        # print(this_stressor$Stressors)
+
         # Create inputs for the stressor sandbox.
         ms_stress_list[[s]] <- module_matrix_model_preview_stress_ui(ns(this_stressor_name))
         print("Feb 11th fix....")
-        # module_matrix_model_preview_stress_server(ns(this_stressor_name), stressor_variable = this_stressor)
         module_matrix_model_preview_stress_server(this_stressor_name, stressor_variable = this_stressor)
-        
+
       }
-      return(ms_stress_list)
-      
+
+      # Wrap all stressor cards in a grid container
+      tags$div(
+        class = "stressor-grid",
+        ms_stress_list
+      )
+
     })
     
     
@@ -178,7 +238,8 @@ module_matrix_model_preview_server <- function(id) {
       req(new_location != "")
       
       # Define the prefix and suffix patterns
-      prefix <- "matrix_model-mm_preview-"
+      # Note: Namespace is now matrix_model-mm_inputs-mm_preview since module moved to inputs tab
+      prefix <- "matrix_model-mm_inputs-mm_preview-"
       suffixes <- c("-pm_ps_val_mean",
                     "-pm_ps_val_sd",
                     "-pm_ps_val_lwr",
@@ -830,12 +891,12 @@ module_matrix_model_preview_server <- function(id) {
     observeEvent(input$samp_plot_type, {
       if (input$samp_plot_type == "stage_classes") {
         # Remove a CSS class to hide
-        removeClass(id = "matrix_model-mm_preview-samp_stages",
+        removeClass(id = "matrix_model-mm_inputs-mm_preview-samp_stages",
                     class = "hide-this",
                     asis = TRUE)
       } else {
         # Add a CSS class to hide
-        addClass(id = "matrix_model-mm_preview-samp_stages",
+        addClass(id = "matrix_model-mm_inputs-mm_preview-samp_stages",
                  class = "hide-this",
                  asis = TRUE)
       }
@@ -862,23 +923,44 @@ module_matrix_model_preview_server <- function(id) {
                    
                    # Check if population is being run in anadromous mode
                    anadrmous <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$anadrmous
-                   
+
+                   # Explainer text for anadromous mode (will be shown conditionally)
+                   anadromous_explainer <- NULL
+
                    if (anadrmous) {
                      # Update stage names
                      mnames <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$life_histories$stage_names
                      opt_1 <- rev(seq(1, length(mnames), by = 1))
                      stg_opt <- paste0("V", opt_1)
                      names(stg_opt) <- rev(mnames)
-                     # Default to select largest stage
-                     stage_select <- stg_opt[[1]]
+
+                     # Pre-select all _B_ (breeder) stages in anadromous mode
+                     b_stage_indices <- which(grepl("_B_|stage_B", names(stg_opt), ignore.case = TRUE))
+                     if (length(b_stage_indices) > 0) {
+                       stage_select <- stg_opt[b_stage_indices]
+                     } else {
+                       # Fallback to largest stage if no _B_ stages found
+                       stage_select <- stg_opt[[1]]
+                     }
+
+                     # Create explainer text for anadromous mode
+                     anadromous_explainer <- tags$div(
+                       style = "background-color: #fef9e7; border-left: 4px solid #f39c12; padding: 8px; margin-bottom: 15px; font-size: 12px;",
+                       tags$strong("Anadromous Mode: "),
+                       tags$span(
+                         "stage_B_X = Breeder (spawner) age classes returning to spawn. ",
+                         "stage_Pb_X = Pre-breeder age classes still at sea. ",
+                         "Plot values represent the sum of individuals across selected stage classes for each year."
+                       )
+                     )
                    }
-                   
-                   
-                   
+
+
+
                    showModal(
                      modalDialog(
-                       title = "Sample Time Series Projection",
-                       
+                       title = "Scenario Time Series Projection",
+
                        tagList(
                          radioButtons(
                            ns("samp_plot_type"),
@@ -890,7 +972,7 @@ module_matrix_model_preview_server <- function(id) {
                            ),
                            inline  = TRUE
                          ),
-                         
+
                          checkboxGroupInput(
                            ns("samp_stages"),
                            "Select stages to plot (checking more than one stage box shows the sum across stage classes):",
@@ -898,7 +980,10 @@ module_matrix_model_preview_server <- function(id) {
                            selected = stage_select,
                            inline = TRUE
                          ),
-                         
+
+                         # Show anadromous explainer if in anadromous mode
+                         anadromous_explainer,
+
                          # Add an input for burn-in years with default set to zero
                          numericInput(
                            ns("samp_burn_in"),
@@ -908,22 +993,34 @@ module_matrix_model_preview_server <- function(id) {
                            max = 100,
                            step = 1
                          ),
-                         
+
                          plotlyOutput(ns("samp_adults")),
-                         # --- NEW UI elements for scenario saving ---
-                         
+
+                         # --- Guidance text for saving scenarios ---
+                         tags$div(
+                           style = "background-color: #d9edf7; border-left: 4px solid #31708f; padding: 10px; margin-top: 15px; margin-bottom: 10px;",
+                           tags$span(
+                             style = "color: #31708f;",
+                             tags$strong("Save Your Scenario: "),
+                             "Give your scenario a unique, descriptive name (e.g., '02_High_Harvest' or '03_Restored_Habitat') ",
+                             "and click 'Save Scenario Data' to add it to the comparison. You can run multiple projections ",
+                             "with different parameters and compare them in the Results tab."
+                           )
+                         ),
+
                          tags$br(),
-                         
+
                          fluidRow(column(6, textInput(
-                           ns("scenario_name"), "Current scenario Name", value = "01_Baseline"
+                           ns("scenario_name"), "Scenario Name:", value = "01_Baseline"
                          )), column(
-                           3,
-                           tags$p("Save current scenario"),
-                           actionButton(
-                             ns("save_scenario"),
-                             "Save Scenario Data",
-                             icon = icon("save"),
-                             style = "color: #fff; background-color: #48a630; border-color: #2e6da4"
+                           6,
+                           tags$div(style = "margin-top: 25px;",
+                             actionButton(
+                               ns("save_scenario"),
+                               "Save Scenario Data",
+                               icon = icon("save"),
+                               style = "color: #fff; background-color: #48a630; border-color: #2e6da4; font-size: 16px;"
+                             )
                            )
                          ))), 
                        

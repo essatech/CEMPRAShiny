@@ -22,8 +22,7 @@ module_matrix_model_ltre_ui <- function(id) {
         ))
       ),
       
-      actionButton(ns("ltre_projection"), "Run Sensitivity Test on Productivity", class = "btn btn-danger",
-                   style = "color:white;")
+      actionButton(ns("ltre_projection"), "Run Sensitivity Test on Productivity")
     )
   )
 }

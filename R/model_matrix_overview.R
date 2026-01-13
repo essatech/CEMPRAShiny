@@ -1,28 +1,70 @@
 # model_matrix_overview.R
 model_matrix_overview_ui <- function(id) {
   ns <- NS(id)
-  
+
   tagList(
     tags$br(),
-    
-    tags$h4("Overview"),
-    
+
+    # Scenario Results Section
+    tags$h4("Compare Scenario Results"),
+
     tags$p(
-      "Navigate through the following tab panels (blue text above) to adjust the survival, growth, reproduction, and density dependant constraints on the life cycle model. Life cycle model vital rate files can be edited here, exported (on the Download Data tab), and then re-uploaded in the file upload inputs (at the top of this page). Make sure the number of life stages is correct for your target species. Also, determine whether the life cycle should follow an anadromous life history (e.g., for salmon) or non-anadromous life history (e.g., for trout and other organisms that can reproduce more than once in their life cycle)."
+      "Use this tab to compare population projections across different scenarios.
+      Each scenario represents a unique combination of parameter settings and stressor magnitudes.",
+      class = "pm-ht"
     ),
-    
-    tags$h4("Scenario Results"),
-    
+
+    tags$div(
+      class = "alert alert-secondary",
+      style = "margin-top: 15px;",
+      tags$strong("How to use:"),
+      tags$ol(
+        style = "margin-bottom: 0; padding-left: 20px;",
+        tags$li("Go to the ", tags$strong("Run Population Model"), " tab and configure your projection settings."),
+        tags$li("Click ", tags$strong("Run Population Projection"), " to generate results."),
+        tags$li("In the time series modal, click ", tags$strong("Save Scenario"), " to store results."),
+        tags$li("Repeat with different parameter configurations to build comparison scenarios."),
+        tags$li("Return here to view side-by-side comparisons of all saved scenarios.")
+      )
+    ),
+
+    tags$p(
+      "The first scenario saved is automatically named '01_Baseline' and serves as the reference point
+      (shown with a red dotted line on the plot). Subsequent scenarios are numbered sequentially.",
+      class = "pm-ht",
+      style = "margin-top: 10px;"
+    ),
+
     # Button to clear scenario data
-    actionButton(ns("clearScenario"), "Clear scenario data"),
-    
+    tags$div(
+      style = "margin-top: 15px;",
+      actionButton(ns("clearScenario"), "Clear scenario data", class = "btn-warning")
+    ),
+
+    tags$hr(),
+
+    tags$h5("Summary Statistics", style = "text-align: center; margin-top: 20px;"),
+
     # Wrap the tableOutput in a div with center alignment
-    div(style = "text-align: center;",
+    div(style = "display: flex; justify-content: center; margin-top: 15px;",
         tableOutput(ns("scenarioSummary"))
     ),
-    
-    tags$br(),
-    
+
+    # P10/P90 explanation
+    tags$div(
+      style = "text-align: center; margin-top: 10px; margin-bottom: 20px;",
+      tags$small(
+        class = "pm-ht",
+        tags$strong("P10"), " = 10th percentile (90% of simulations exceeded this value); ",
+        tags$strong("P90"), " = 90th percentile (10% of simulations exceeded this value). ",
+        "These values represent the range within which 80% of simulation results fall."
+      )
+    ),
+
+    tags$hr(),
+
+    tags$h5("Scenario Comparison Plot", style = "text-align: center; margin-top: 20px;"),
+
     # The interactive plot output
     plotlyOutput(ns("scenarioPlot")),
     
@@ -118,11 +160,17 @@ model_matrix_overview_server <- function(id) {
             "text",
             x = 0.5,
             y = 0.5,
-            label = "No scenario data",
-            size = 6,
-            hjust = 0.5
+            label = "No scenario data saved yet.\nRun projections from the 'Run Model' tab\nand save scenarios to compare.",
+            size = 5,
+            hjust = 0.5,
+            color = "gray50"
           ) +
-          theme_void()
+          xlim(0, 1) +
+          ylim(0, 1) +
+          theme_void() +
+          theme(
+            panel.border = element_rect(color = "gray80", fill = NA, linewidth = 1)
+          )
         return(ggplotly(p))
       }
       
@@ -139,32 +187,49 @@ model_matrix_overview_server <- function(id) {
         scenario_data$scenario_name <- factor(scenario_data$scenario_name)
       }
       
-      # Create the violin plot.
+      # Create the boxplot with colored scenarios.
       # The geom_boxplot uses outlier.shape = NA so that outlier markers are not displayed.
-      p <- ggplot(scenario_data, aes(x = scenario_name, y = N)) +
-        
-        # geom_violin(trim = FALSE,
-        #             fill = "skyblue",
-        #             color = "black") +
-        
+      p <- ggplot(scenario_data, aes(x = scenario_name, y = N, fill = scenario_name)) +
+
         geom_boxplot(
-          width = 0.1,
-          fill = "white",
-          outlier.shape = NA
+          width = 0.5,
+          outlier.shape = NA,
+          alpha = 0.7
         ) +
-        labs(x = "Scenario", y = "N") +
-        theme_minimal()
-      
+        labs(x = "Scenario", y = "N Individuals") +
+        scale_fill_brewer(palette = "Set2") +
+        theme_bw() +
+        theme(
+          panel.grid.major = element_line(color = "gray80", linewidth = 0.5),
+          panel.grid.minor = element_line(color = "gray90", linewidth = 0.25),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "none"
+        )
+
       # If "01_Baseline" exists, add a horizontal dotted line at its median.
       if ("01_Baseline" %in% scenario_data$scenario_name) {
         p <- p + geom_hline(
           yintercept = baseline_median,
           linetype = "dotted",
-          color = "red"
+          color = "red",
+          linewidth = 1
         )
       }
-      
-      ggplotly(p)
+
+      ggplotly(p) %>%
+        layout(
+          yaxis = list(
+            gridcolor = "gray80",
+            gridwidth = 1,
+            showgrid = TRUE
+          ),
+          xaxis = list(
+            gridcolor = "gray80",
+            gridwidth = 1,
+            showgrid = TRUE
+          )
+        )
     })
     
     # Render the summary table below the plot.
@@ -178,27 +243,27 @@ model_matrix_overview_server <- function(id) {
       
       scenario_data <- as.data.frame(scenario_data)
       
-      # Compute summary statistics for each scenario after excluding outliers.
-      # Outliers are defined as values outside [Q1 - 1.5*IQR, Q3 + 1.5*IQR].
-      # We then compute the median, 10th, and 90th percentiles of the filtered data.
+      # Compute summary statistics for each scenario.
+      # P10 and P90 represent the 10th and 90th percentiles of simulation results.
       scenario_summary <- scenario_data %>%
         group_by(scenario_name) %>%
         summarize(
           Median = round(median(N, na.rm = TRUE), 0),
           Mean = round(mean(N, na.rm = TRUE), 0),
-          p10 = round(quantile(N, 0.10, na.rm = TRUE), 0),
-          p90 = round(quantile(N, 0.90, na.rm = TRUE), 0),
-          Min = round(min(N, 0.10, na.rm = TRUE), 0),
-          Max = round(max(N, 0.90, na.rm = TRUE), 0))
+          P10 = round(quantile(N, 0.10, na.rm = TRUE), 0),
+          P90 = round(quantile(N, 0.90, na.rm = TRUE), 0),
+          Min = round(min(N, na.rm = TRUE), 0),
+          Max = round(max(N, na.rm = TRUE), 0)) %>%
+        rename(Scenario = scenario_name)
       
       
       # Optionally, force "01_Baseline" to appear first.
-      if ("01_Baseline" %in% scenario_summary$scenario_name) {
+      if ("01_Baseline" %in% scenario_summary$Scenario) {
         new_levels <- c("01_Baseline", sort(
-          setdiff(scenario_summary$scenario_name, "01_Baseline")
+          setdiff(scenario_summary$Scenario, "01_Baseline")
         ))
-        scenario_summary$scenario_name <- factor(scenario_summary$scenario_name, levels = new_levels)
-        scenario_summary <- arrange(scenario_summary, scenario_name)
+        scenario_summary$Scenario <- factor(scenario_summary$Scenario, levels = new_levels)
+        scenario_summary <- arrange(scenario_summary, Scenario)
       }
       
       scenario_summary
