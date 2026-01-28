@@ -84,6 +84,119 @@ module_matrix_model_inputs_ui <- function(id) {
           )
         ),
 
+        tags$hr(style = "margin: 25px 0; border-top: 2px solid #3c8dbc;"),
+
+        tags$h4("Stressor Data for Population Model", style = "color: #3c8dbc; margin-bottom: 15px;"),
+
+        tags$p(
+          "The Population Model uses stressor-response relationships to modify vital rates based on environmental conditions.
+          Upload stressor data here to apply cumulative effects to your population projections.",
+          class = "pm-ht"
+        ),
+
+        shinydashboard::box(
+          width = 12,
+          title = "Stressor Response Workbook",
+          collapsible = TRUE,
+          collapsed = FALSE,
+
+          tags$p(
+            "Defines how environmental stressors affect survival, capacity, and fecundity at each life stage.
+            The Population Model uses these relationships to adjust vital rates.",
+            class = "pm-ht"
+          ),
+
+          tags$details(
+            tags$summary(
+              style = "cursor: pointer; color: #337ab7; font-weight: bold; margin-bottom: 10px;",
+              "View format requirements..."
+            ),
+            tags$div(
+              style = "padding: 10px; background-color: #f9f9f9; border-radius: 4px; margin-bottom: 15px;",
+              tags$p(tags$b("Format:"), " Excel workbook (.xlsx)"),
+              tags$p(tags$b("Required worksheets:")),
+              tags$ul(
+                tags$li(tags$b("Main"), " - Index with columns: ", tags$code("Stressors"), ", ", tags$code("Life_stages"), " (e.g., stage_0, stage_1, adult), ", tags$code("Parameters"), " (survival, capacity, or fecundity)"),
+                tags$li(tags$b("Individual stressor worksheets"), " - Dose-response data with columns: ", tags$code("value"), ", ", tags$code("mean_system_capacity"), ", ", tags$code("sd"), ", ", tags$code("lwr"), ", ", tags$code("upr"))
+              ),
+              tags$p(
+                tags$a(href = "https://mattjbayly.github.io/CEMPRA_documentation/05_data_inputs.html#stressor-response-workbook",
+                       target = "_blank", icon("external-link-alt"), " Full format specification")
+              )
+            )
+          ),
+
+          fluidRow(
+            column(
+              width = 6,
+              fileInput(
+                ns("up_sr_wb_pop"),
+                label = "Stressor Response Workbook (xlsx)",
+                multiple = FALSE,
+                accept = c(".xlsx")
+              )
+            ),
+            column(
+              width = 6,
+              div(style = "color: #ffffff; background: #ff000059; border-radius: 5px; margin: 5px; padding: 5px;",
+                  textOutput(ns("upload_error_msg_sr_pop")))
+            )
+          )
+        ),
+
+        shinydashboard::box(
+          width = 12,
+          title = "Stressor Magnitude Workbook",
+          collapsible = TRUE,
+          collapsed = FALSE,
+
+          tags$p(
+            "Contains location-specific stressor values that determine how environmental conditions
+            modify population vital rates at each site.",
+            class = "pm-ht"
+          ),
+
+          tags$details(
+            tags$summary(
+              style = "cursor: pointer; color: #337ab7; font-weight: bold; margin-bottom: 10px;",
+              "View format requirements..."
+            ),
+            tags$div(
+              style = "padding: 10px; background-color: #f9f9f9; border-radius: 4px; margin-bottom: 15px;",
+              tags$p(tags$b("Format:"), " Excel workbook (.xlsx)"),
+              tags$p(tags$b("Required columns:")),
+              tags$ul(
+                tags$li(tags$code("HUC_ID"), " - Location identifier (must match spatial data and habitat capacities)"),
+                tags$li(tags$code("NAME"), " - Location name"),
+                tags$li(tags$code("Stressor"), " - Stressor name (must match Stressor Response Workbook)"),
+                tags$li(tags$code("Mean"), ", ", tags$code("SD"), ", ", tags$code("Distribution"), ", ", tags$code("Low_Limit"), ", ", tags$code("Up_Limit"))
+              ),
+              tags$p(tags$em("Tip: Use different worksheets for baseline vs. scenario conditions.")),
+              tags$p(
+                tags$a(href = "https://mattjbayly.github.io/CEMPRA_documentation/05_data_inputs.html#stressor-magnitude-workbook",
+                       target = "_blank", icon("external-link-alt"), " Full format specification")
+              )
+            )
+          ),
+
+          fluidRow(
+            column(
+              width = 6,
+              fileInput(
+                ns("up_sm_wb_pop"),
+                label = "Stressor Magnitude Workbook (xlsx)",
+                multiple = FALSE,
+                accept = c(".xlsx")
+              )
+            ),
+            column(
+              width = 6,
+              div(style = "color: #ffffff; background: #ff000059; border-radius: 5px; margin: 5px; padding: 5px;",
+                  textOutput(ns("upload_error_msg_sm_pop")))
+            )
+          )
+        ),
+
         tags$br()
       ),
 
@@ -965,9 +1078,20 @@ module_matrix_model_inputs_ui <- function(id) {
               numericInput(ns("cr_10"), label = "cr_10 (Stage 10 Survival CR)", value = life_stages$Value[life_stages$Name == "cr_10"])
             )
           ),
-          
+
+          tags$hr(style = "margin: 20px 0;"),
+
+          tags$div(
+            class = "lam_bb",
+            actionButton(
+              ns("compensation_ratios"),
+              "Compensation Ratios (explainer)",
+              icon = icon("info-circle")
+            )
+          )
+
         )
-        
+
       ),
       # end Density Dependence tab
       
@@ -1536,10 +1660,174 @@ module_matrix_model_inputs_server <- function(id) {
           })
       })
     }) # end habitat capacities import
-    
-    
-    
-    
+
+
+    #--------------------------------------
+    # Upload Stressor Response Workbook (from Pop Model page)
+    #--------------------------------------
+    observe({
+      # Require the file
+      req(input$up_sr_wb_pop)
+
+      print("Upload Stressor Response Workbook from Population Model page...")
+
+      # Run import function in a try catch
+      # to avoid app crashing on upload errors
+      tryCatch({
+        in_file <- input$up_sr_wb_pop
+
+        if (is.null(in_file)) {
+          return(NULL)
+        }
+
+        # Extract the stressor response relationships
+        sr_wb_dat <-
+          CEMPRA::StressorResponseWorkbook(filename = input$up_sr_wb_pop$datapath)
+
+        # Update the session$userData$rv_stressor_response reactive object
+        start_time <- Sys.time()
+
+        # Designate the stressor response object as a reactive value
+        session$userData$rv_stressor_response$main_sheet <-
+          sr_wb_dat$main_sheet
+        session$userData$rv_stressor_response$stressor_names <-
+          sr_wb_dat$stressor_names
+        session$userData$rv_stressor_response$pretty_names <-
+          sr_wb_dat$pretty_names
+        session$userData$rv_stressor_response$sr_dat <-
+          sr_wb_dat$sr_dat
+        session$userData$rv_stressor_response$active_layer <-
+          sr_wb_dat$stressor_names[1]
+        session$userData$rv_stressor_response$active_values_raw <-
+          NULL
+        session$userData$rv_stressor_response$active_values_response <-
+          NULL
+        session$userData$rv_stressor_response$active_refresh <-
+          start_time
+        session$userData$rv_stressor_response$hover_values <-
+          FALSE
+        session$userData$rv_stressor_response$interaction_names <-
+          names(sr_wb_dat$MInt)
+        session$userData$rv_stressor_response$interaction_values <-
+          sr_wb_dat$MInt
+
+        # Trigger map redraw to clear selection
+        session$userData$rv_redraw$redraw <- 0
+
+        # Clear selected HUCs
+        session$userData$rv_clickedIds$ids <- vector()
+        session$userData$rv_clickedIds_csc$csc <- NA
+        session$userData$rv_clickedIds_csc$var_csc <- NA
+
+        # Clear Joe model results (since input data changed)
+        session$userData$rv_joe_model_results$sims <- list()
+        session$userData$rv_joe_model_sim_names$scenario_names <- list()
+        session$userData$rv_joe_model_run_time$run_time_seconds <- list()
+
+        # Clear out any previous population model runs since data changed
+        session$userData$rv_pop_data_huc_ts$dat <- list()
+        session$userData$rv_pop_data_huc_ts$run_counter <- 1
+        session$userData$rv_pop_data_huc_ts$update_ts_plots <- FALSE
+        session$userData$rv_show_pop_main_plot$open <- FALSE
+
+        # Clear sample plot data
+        session$userData$rv_pop_sample_plot_data$dat <- list()
+        session$userData$rv_pop_sample_plot_data$run_counter <- 1
+
+        # Clear sandbox stressors
+        print("Triggering rv_sandbox_stressors$dat flush with sr data from pop model...")
+        session$userData$rv_sandbox_stressors$dat <- list()
+
+        # Clear error message on success
+        output$upload_error_msg_sr_pop <- renderText({ "" })
+
+      }, error = function(e) {
+        print("Upload error (SR from Pop Model)...")
+        output$upload_error_msg_sr_pop <- renderText({
+          "Upload Error: Stressor Response Workbook (xlsx) did not import correctly. Check data format, worksheet names and column names."
+        })
+      })
+    }) # end Stressor Response Workbook upload (Pop Model page)
+
+
+    #--------------------------------------
+    # Upload Stressor Magnitude Workbook (from Pop Model page)
+    #--------------------------------------
+    observe({
+      # Require the file
+      req(input$up_sm_wb_pop)
+
+      print("Upload Stressor Magnitude Workbook from Population Model page...")
+
+      # Run import function in a try catch
+      # to avoid app crashing on upload errors
+      tryCatch({
+        in_file <- input$up_sm_wb_pop
+
+        if (is.null(in_file)) {
+          return(NULL)
+        }
+
+        # Extract the stressor magnitude data
+        sm_wb_dat <-
+          CEMPRA::StressorMagnitudeWorkbook(
+            filename = input$up_sm_wb_pop$datapath,
+            scenario_worksheet = 1
+          )
+
+        start_time <- Sys.time()
+
+        # Reset active layer in stressor response
+        session$userData$rv_stressor_response$active_layer <-
+          session$userData$rv_stressor_response$stressor_names[1]
+        session$userData$rv_stressor_response$active_values_raw <- NULL
+        session$userData$rv_stressor_response$active_values_response <- NULL
+        session$userData$rv_stressor_response$active_refresh <- start_time
+        session$userData$rv_stressor_response$hover_values <- FALSE
+
+        # Update the stressor magnitude data
+        session$userData$rv_stressor_magnitude$sm_dat <- sm_wb_dat
+
+        # Trigger map redraw to clear selection
+        session$userData$rv_redraw$redraw <- 0
+
+        # Clear selected HUCs
+        session$userData$rv_clickedIds$ids <- vector()
+        session$userData$rv_clickedIds_csc$csc <- NA
+        session$userData$rv_clickedIds_csc$var_csc <- NA
+
+        # Clear Joe model results (since input data changed)
+        session$userData$rv_joe_model_results$sims <- list()
+        session$userData$rv_joe_model_sim_names$scenario_names <- list()
+        session$userData$rv_joe_model_run_time$run_time_seconds <- list()
+
+        # Clear out any previous population model runs since data changed
+        session$userData$rv_pop_data_huc_ts$dat <- list()
+        session$userData$rv_pop_data_huc_ts$run_counter <- 1
+        session$userData$rv_pop_data_huc_ts$update_ts_plots <- FALSE
+        session$userData$rv_show_pop_main_plot$open <- FALSE
+
+        # Clear sample plot data
+        session$userData$rv_pop_sample_plot_data$dat <- list()
+        session$userData$rv_pop_sample_plot_data$run_counter <- 1
+
+        # Clear sandbox stressors
+        print("Triggering rv_sandbox_stressors$dat flush with sm data from pop model...")
+        session$userData$rv_sandbox_stressors$dat <- list()
+
+        # Clear error message on success
+        output$upload_error_msg_sm_pop <- renderText({ "" })
+
+      }, error = function(e) {
+        print("Upload error (SM from Pop Model)...")
+        output$upload_error_msg_sm_pop <- renderText({
+          "Upload Error: Stressor Magnitude Workbook (xlsx) did not import correctly. Check data format and column names."
+        })
+      })
+    }) # end Stressor Magnitude Workbook upload (Pop Model page)
+
+
+
     # Add observe event to listen to Nstage input
     # and hide additional input boxes depending on the value
     # Make additional boxes disappear
@@ -1786,10 +2074,301 @@ module_matrix_model_inputs_server <- function(id) {
       
       
       print("End of passive inputs...")
-      
+
     })
-    
-    
-    
+
+
+    #-------------------------------------------------------
+    # Compensation Ratios - Render Functions and Modal
+    #-------------------------------------------------------
+
+    # Copy adult k to panel
+    output$print_adult_k <- renderText({
+      print("print_adult_k...")
+      dat <- session$userData$rv_life_stages$dat
+      val <- dat$Value[which(dat$Name == "k")]
+      return(val)
+    })
+
+    # Beverton-Holt Sample Plot
+    output$bh_plot <- renderPlot({
+      bh <- function(K = NA, surv = NA, Nt = NA) {
+        Nt2 <- (surv * Nt) / (1 + Nt * (surv/K))
+        return(Nt2)
+      }
+
+      surv <- 0.8
+      K <- 100
+      Nt <- seq(0, 1500, by = 5)
+      res <- lapply(Nt, bh, K = K, surv = surv)
+      Nt2 <- unlist(res)
+      plot(
+        Nt, Nt2, type = 'l',
+        xlim = c(0, 1000), ylim = c(0, 100),
+        xlab = expression('N'[' i, t']),
+        ylab = expression('N'[' i, t+1']),
+        sub = "BH function with K = 100 and productivity = 0.8"
+      )
+      abline(0, surv, lty = 3, col = "red", lwd = 1.5)
+      abline(h = K, lty = 2, col = "blue", lwd = 1.5)
+    })
+
+    # Compensation Ratio Sample Plot
+    output$cr_samp_plot <- renderPlot({
+      crf <- function(CR = NA, Nt = NA, K = NA, surv = NA) {
+        val <- (CR * surv) / (1 + (CR - 1) * (Nt / K))
+        val <- ifelse(val > 1, 1, val)
+      }
+
+      surv <- 0.8
+      K <- 100
+      Nt <- seq(0, 500, by = 5)
+
+      CR <- 1
+      CR_adj_1 <- unlist(lapply(Nt, crf, CR = CR, K = K, surv = surv))
+      CR <- 1.1
+      CR_adj_1.1 <- unlist(lapply(Nt, crf, CR = CR, K = K, surv = surv))
+      CR <- 2
+      CR_adj_2 <- unlist(lapply(Nt, crf, CR = CR, K = K, surv = surv))
+      CR <- 5
+      CR_adj_5 <- unlist(lapply(Nt, crf, CR = CR, K = K, surv = surv))
+      CR <- 0.97
+      CR_adj_0.9 <- unlist(lapply(Nt, crf, CR = CR, K = K, surv = surv))
+
+      plot(
+        Nt, CR_adj_1, type = 'l',
+        xlim = c(5, 600), ylim = c(0, 1),
+        xlab = expression('N'[' i, t']),
+        ylab = expression('Modified survival'[' i, t']),
+        sub = "CR function with K = 100 and productivity = 0.8"
+      )
+      points(Nt, CR_adj_1.1, type = 'l')
+      points(Nt, CR_adj_2, type = 'l')
+      points(Nt, CR_adj_5, type = 'l')
+      points(Nt, CR_adj_0.9, type = 'l', col = 'grey')
+
+      text(550, tail(CR_adj_1.1)[1], labels = c("CR: 1.1"), cex = 0.8)
+      text(550, tail(CR_adj_2)[1], labels = c("CR: 2"), cex = 0.8)
+      text(550, tail(CR_adj_5)[1], labels = c("CR: 5"), cex = 0.8)
+      text(550, tail(CR_adj_1)[1], labels = c("CR: 1.0"), cex = 0.8)
+      text(550, tail(CR_adj_0.9)[1], labels = c("CR: 0.97"), cex = 0.8)
+
+      abline(h = 0.8, lty = 3, col = "red", lwd = 1.5)
+      abline(v = K, lty = 2, col = "blue", lwd = 1.5)
+      abline(h = K * surv, lty = 4, col = "green", lwd = 1.5)
+    })
+
+    # Stable stage K data table
+    output$dt_stablestage_k <- DT::renderDataTable({
+      print("Building dt_stablestage_k...")
+
+      ss <- session$userData$rv_eigen_analysis$dat$ea$stable.stage
+      nstage <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$life_histories$Nstage
+      Ka <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$life_histories$Ka
+
+      ss <- as.numeric(ss)
+      k_stage <- ss * Ka / ss[nstage]
+      ss <- round(ss, 3)
+      ss <- data.frame(t(ss))
+      k_stage <- round(k_stage, 0)
+
+      repro_ss <- rbind(ss, k_stage)
+      colnames(repro_ss) <- paste0("Stage ", 1:ncol(ss))
+      rownames(repro_ss) <- c("Stable Stage", "Stage Capacities K")
+
+      DT::datatable(
+        repro_ss,
+        editable = FALSE,
+        caption = "Stable Stage Distributions (0 - 1) & Stage Capacities (K)",
+        filter = "none",
+        selection = "single",
+        rownames = TRUE,
+        class = "cell-border stripe",
+        options = list(
+          pageLength = 500,
+          info = FALSE,
+          dom = 't',
+          ordering = FALSE,
+          columnDefs = list(list(className = 'dt-left', targets = "_all"))
+        )
+      )
+    })
+
+    # Transition matrix data table for CR modal
+    output$dt_transition_matrix_cr <- DT::renderDataTable({
+      print("Building dt_transition_matrix_cr...")
+
+      A <- round(session$userData$rv_eigen_analysis$dat$pop_mod_mat$projection_matrix, 3)
+      mnames <- paste("Stage", 1:ncol(A))
+
+      anadrmous <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$anadrmous
+      if (anadrmous) {
+        mnames <- session$userData$rv_eigen_analysis$dat$pop_mod_mat$life_histories$stage_names
+        mnames <- gsub("_", " ", mnames)
+        mnames <- gsub("stage", "Stage", mnames)
+      }
+
+      colnames(A) <- mnames
+      rownames(A) <- mnames
+
+      DT::datatable(
+        A,
+        editable = FALSE,
+        caption = "Transition matrix",
+        filter = "none",
+        selection = "single",
+        rownames = TRUE,
+        class = "cell-border stripe",
+        options = list(
+          pageLength = 500,
+          info = FALSE,
+          dom = 't',
+          ordering = FALSE,
+          columnDefs = list(list(className = 'dt-left', targets = "_all"))
+        )
+      )
+    })
+
+    # Compensation Ratios Modal
+    observeEvent(input$compensation_ratios, {
+      print("compensation_ratios modal ...")
+
+      showModal(
+        modalDialog(
+          title = "Compensation Ratios",
+          tagList(
+            tags$p(
+              "It is rare for natural populations to grow in perpetuity without any constraints on grow, survival, and reproduction. Therefore, population models will typically include mechanism(s) to constrain population growth or sustained densities. Compensation ratios (CR values) are used in this tool to parameterize and govern density-dependent growth conditions. Compensation ratios (described below) are a re-parameterization of the classical Beverton-Holt function for density-dependent growth."
+            ),
+            tags$p(
+              "The Beverton-Holt function gives the expected number of individuals, in the subsequent time step (N at time + 1, or density) as a function of the number of individuals in the current time step (N at time). In the case of matrix population models, this relationship is expressed as the number of individuals transitioning between two stages (e.g., from stage 2 to stage 3) where density dependent constraints are present. In the Beverton-Holt function, governing parameters include an estimate of carrying capacity (K), a baseline estimate of survival (S) (productivity) for the transition probability (in the absence of any density-dependent effects) and the number of individuals in the current stage class (Nt)."
+            ),
+            withMathJax(),
+            helpText(
+              'Beverton-Holt function for density-dependent growth:
+              $$N_{t+1}=\\frac{S \\cdot N_t}{1 + (\\frac{S}{K}) \\cdot N_t}$$'
+            ),
+
+            fluidRow(
+              column(1),
+              column(
+                10,
+                align = "center",
+                plotOutput(ns("bh_plot")),
+                tags$p(
+                  "Overview of the Beverton-Holt function showing the number of individuals at time (t) on the x-axis and the number of individuals at time + 1 one on the y-axis. The curved black line shows the effects of density dependant growth. The steep red line is the productivity of 0.8 under density-independent growth conditions. The blue line is the hypothetical caring capacity of 100, and the green line is the max achievable capacity calculated K (100) multiply by 0.8 = 80."
+                )
+              ),
+              column(1),
+            ),
+            tags$p(
+              "Compensation Ratios (CR) are used in the population modelling component of this tool as a modified version of the Beverton-Holt equation to adjust the survivorship of each life stage based on the observed densities (abundance, N i,t) and stage-specific carrying capacities (Ki):"
+            ),
+
+            withMathJax(),
+            helpText(
+              'Compensation Ratio CR for life stage i:
+              $$S_{i,t}=\\frac{S_{i,0} \\cdot w_i}{1 + \\frac{w_i - 1 \\cdot N_{i,t}}{K_i}}$$'
+            ),
+
+
+            tags$p(
+              "In the CR equation Si,0 is the baseline survivorship under density-independent growth conditions; wi is the compensation ratio (CR value) of life stage i; Ni,t is the current number of individuals in life stage i in a given time step (t); and Ki is the carrying capacity of life stage i. The compensation ratios, in essence, modify the survivorship of each life stage based on how far the stage-specific abundance (Ni,t) has departed from its assumed carrying capacity (Ki)."
+            ),
+
+            tags$p(
+              "A plot of compensation ratios is provided below to illustrate their effects of stage-specific survivorship transitions. In this example abundance values of a hypothetical stage class (i) are plotted along the x-axis with a carrying capacity (Ki) set to 100 individuals (blue vertical line). The hypothetical stage class (i) has a baseline survivorship (productivity) value of 0.8 in the absence of density-dependent growth conditions (horizontal red line). The y-axis on the plot shows how the default survivorship value of 0.8 is modified based on the stage-specific compensation ratio for stage class (CR i). The survivorship value for the stage class is suppressed as the abundance values exceed the carrying capacity K. The effects are amplified as compensation ratios are increased. Compensation ratios of 1.0 leave the vital rate unmodified. Compensation ratios less than 1.0 increase survivorship values (allowing for a potential positive effect of density). When the abundance of the age class is less than the carrying capacity baseline survivorship values can actually be increase. However, within the model code adjusted survivorship values are fixed so that they never exceed 1.0 for any stage transition."
+            ),
+
+            fluidRow(
+              column(1),
+              column(10, align = "center", plotOutput(ns("cr_samp_plot"))),
+              column(1)
+            ),
+
+            tags$b("Carrying Capacity Estimates:"),
+            tags$p(
+              "It is also useful to understand how stage-specific carrying capacity values are estimated in the tool. Current, it is only possible to modify the carrying capacity for the adult age class (stage 4) via the K parameter in the inputs. The K values for other age classes are calculated from the stable stage distribution of the underlying transition matrix (B):"
+            ),
+            tags$ul(
+              tags$li(
+                "K (Stage-0, eggs): Calculated as the project of individuals in the mature age classes, multiplied by the maturation probability for each class, the number of spawning events, eggs per female, sex ration and spawning interval."
+              ),
+              tags$li(
+                "K (Stage-0, fry): K values for young-of-the-year (fry/Age-0) individuals is calculated as the produce of K eggs (above) * the egg survival (SE)."
+              ),
+              tags$li(
+                "K (Stage-1): Calculated from the stable-stage distribution of the transition matrix (B) after setting the adult stage (Stage-4) to K (e.g., 100)."
+              ),
+              tags$li(
+                "K (Stage-2): Calculated from the stable-stage distribution of the transition matrix (B) after setting the adult stage (Stage-4) to K (e.g., 100)."
+              ),
+              tags$li(
+                "K (Stage-3): Calculated from the stable-stage distribution of the transition matrix (B) after setting the adult stage (Stage-4) to K (e.g., 100)."
+              ),
+              tags$li(
+                "K (Stage-4): Manually input by user for the population of interest."
+              )
+            ),
+            tags$b("Stage-stage distribution (portions) under current model settings:"),
+
+            DT::dataTableOutput(ns("dt_stablestage_k")),
+            br(),
+            p(
+              paste0(
+                "Current K values per stage class. Calculated from stable-stage distributions after fixing the adult (stage-4) K to: ",
+                textOutput(ns("print_adult_k"))
+              )
+            ),
+            br(),
+
+            tags$b("Density-Dependence Matrix (D):"),
+            tags$p(
+              "Based on the derived stage-specific carry capacities (K values), baseline survivorship values (SE, S0, surv_1, ...) and the corresponding compensation ratios (cr_E, cr_0, cr_1, ...) a density-dependence matrix (D) for a hypothetical population vector of egg: 10,000,000, fry: 1,000,000; stage 1: 100,000, stage 2: 10,000, stage 3: 1,000 & stage 4: 100 we appear as follows:"
+            ),
+
+            tags$p(
+              "The density-dependence matrix (D) represents modifiers for the survivorship estimate for each stage transition. The density dependence matrix (D) is then multiplied with the corresponding transition matrix (B) of density-independent transition probabilities:"
+            ),
+
+            DT::dataTableOutput(ns("dt_transition_matrix_cr")),
+
+
+            tags$p(
+              "Then, to get the finalized projection matrix (A) the two previous matrices are multipled together [A is a product of B*D = A]. The projection matrix (A) is recalculated for each time step. Note that vital rate modifiers from environmental parameters linked to stressor-response functions will result in changes to either the survivorship, capacity or fecundity values (omitted here)."
+            ),
+
+
+            tags$p(
+              "Compensation ratios are (generally) widely used as parameters in stock-recruitment functions although they are admittedly less popular in classical matrix population modeling. Steepness (the proportion of recruitment produced when stock size is reduced to 20% of initial biomass) is sometimes used in place of compensation ratios. Numerous other methods exist to introduce density dependence into stage-structured population models. The compensation ratios were used in this tool to represent a versatile mechanism for applications to a large number of hypothetical species profiles. For additional background please review the following references to learn more about compensation ratios and population modelling with density-dependent growth. "
+            ),
+            tags$b("Useful References:"),
+            tags$p(
+              "Goodyear, C. P. (1980). Compensation in fish populations. Biological monitoring of fish, 253-280."
+            ),
+            tags$p(
+              "Myers, R. A. (2001). Stock and recruitment: generalizations about maximum reproductive rate, density dependence, and variability using meta-analytic approaches. ICES Journal of Marine Science, 58(5), 937-951."
+            ),
+            tags$p(
+              "Rose, K. A., Cowan Jr, J. H., Winemiller, K. O., Myers, R. A., & Hilborn, R. (2001). Compensatory density dependence in fish populations: importance, controversy, understanding and prognosis. Fish and Fisheries, 2(4), 293-327."
+            ),
+            tags$p(
+              "Myers, R. A., Bowen, K. G., & Barrowman, N. J. (1999). Maximum reproductive rate of fish at low population sizes. Canadian Journal of Fisheries and Aquatic Sciences, 56(12), 2404-2419."
+            ),
+            tags$p(
+              "Walters, C. J., & Martell, S. J. (2004). Fisheries ecology and management. Princeton University Press."
+            ),
+            tags$p(
+              "Forrest, R. E., McAllister, M. K., Dorn, M. W., Martell, S. J., & Stanley, R. D. (2010). Hierarchical Bayesian estimation of recruitment parameters and reference points for Pacific rockfishes (Sebastes spp.) under alternative assumptions about the stock-recruit function. Canadian Journal of Fisheries and Aquatic Sciences, 67(10), 1611-1634."
+            )
+          ),
+          easyClose = TRUE,
+          size = "l",
+          footer = NULL
+        )
+      )
+    })
+
+
   })
 }

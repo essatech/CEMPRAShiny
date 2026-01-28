@@ -68,6 +68,23 @@ module_sr_creation_map_server <- function(id, rv_formula_df, color_ramp) {
             bringToFront = TRUE
           )
         )
+      } else if (isolate(session$userData$geom_type) == "points") {
+        # Point geometry - use circle markers
+        point_radius <- 8
+        if (!(is.null(isolate(session$userData$rv_HUC_layer_load$data$RADIUS)))) {
+          point_radius <- isolate(session$userData$rv_HUC_layer_load$data$RADIUS)
+        }
+        mymap <- addCircleMarkers(
+          map = mymap,
+          data = session$userData$rv_HUC_layer_load$data,
+          layerId = session$userData$rv_HUC_layer_load$data$uid,
+          radius = point_radius,
+          color = "#444444",
+          weight = 1.5,
+          opacity = 0.8,
+          fillOpacity = 0.6,
+          fillColor = "#d9d9d9"
+        )
       } else {
         mymap <- addPolygons(
           map = mymap,
@@ -105,11 +122,13 @@ module_sr_creation_map_server <- function(id, rv_formula_df, color_ramp) {
       # HUC spatial geometry
       huc_geom <- session$userData$rv_HUC_geom$huc_geom
       
-      # Check if geometry is line or polygon
+      # Check if geometry is line, point, or polygon
       geom_type <-
         st_geometry_type(session$userData$rv_HUC_layer_load$data)
       if (unique(geom_type)[1] %in% c("LINESTRING", "MULTILINESTRING")) {
         session$userData$geom_type <- "lines"
+      } else if (unique(geom_type)[1] %in% c("POINT", "MULTIPOINT")) {
+        session$userData$geom_type <- "points"
       } else {
         session$userData$geom_type <- "polygons"
       }
@@ -197,8 +216,22 @@ module_sr_creation_map_server <- function(id, rv_formula_df, color_ramp) {
     
     observe({
       print("Updating polygons with observer()...")
-      
-      if (isolate(session$userData$geom_type) == "lines") {
+
+      # Get the data and determine geometry type directly from the data
+      huc_data <- r_huc_polygons()
+      req(huc_data)
+
+      # Detect geometry type from the actual data
+      geom_types <- unique(sf::st_geometry_type(huc_data))
+      if (any(geom_types %in% c("POINT", "MULTIPOINT"))) {
+        current_geom_type <- "points"
+      } else if (any(geom_types %in% c("LINESTRING", "MULTILINESTRING"))) {
+        current_geom_type <- "lines"
+      } else {
+        current_geom_type <- "polygons"
+      }
+
+      if (current_geom_type == "lines") {
         line_weight <- 3
         if (!(is.null(
           isolate(session$userData$rv_HUC_layer_load$data$WIDTH)
@@ -209,9 +242,9 @@ module_sr_creation_map_server <- function(id, rv_formula_df, color_ramp) {
           clearShapes() %>%
           # Add or update HUC polygons on the map
           addPolylines(
-            data = r_huc_polygons(),
-            layerId = r_huc_polygons()$uid,
-            color = r_huc_polygons()$color_vec2,
+            data = huc_data,
+            layerId = huc_data$uid,
+            color = huc_data$color_vec2,
             weight = line_weight,
             smoothFactor = 0.5,
             opacity = 0.7,
@@ -223,20 +256,41 @@ module_sr_creation_map_server <- function(id, rv_formula_df, color_ramp) {
           ) %>%
           # Delete any old pre-existing legend
           clearControls()
-      }
-      if (session$userData$geom_type == "polygons") {
+      } else if (current_geom_type == "points") {
+        # Point geometry - use circle markers
+        point_radius <- 8
+        if (!(is.null(isolate(session$userData$rv_HUC_layer_load$data$RADIUS)))) {
+          point_radius <- isolate(session$userData$rv_HUC_layer_load$data$RADIUS)
+        }
+        leafletProxy("srcmap") %>%
+          clearMarkers() %>%
+          # Add or update points on the map
+          addCircleMarkers(
+            data = huc_data,
+            layerId = huc_data$uid,
+            radius = point_radius,
+            color = "#444444",
+            weight = 1.5,
+            opacity = 0.8,
+            fillOpacity = 0.7,
+            fillColor = huc_data$color_vec2
+          ) %>%
+          # Delete any old pre-existing legend
+          clearControls()
+      } else {
+        # Default to polygons
         leafletProxy("srcmap") %>%
           clearShapes() %>%
           # Add or update HUC polygons on the map
           addPolygons(
-            data = r_huc_polygons(),
-            layerId = r_huc_polygons()$uid,
+            data = huc_data,
+            layerId = huc_data$uid,
             color = "#444444",
             weight = 1.2,
             smoothFactor = 0.5,
             opacity = 0.5,
             fillOpacity = 0.5,
-            fillColor = r_huc_polygons()$color_vec2,
+            fillColor = huc_data$color_vec2,
             highlightOptions = highlightOptions(
               color = "white",
               weight = 2,
@@ -246,10 +300,7 @@ module_sr_creation_map_server <- function(id, rv_formula_df, color_ramp) {
           # Delete any old pre-existing legend
           clearControls()
       }
-      
-      
-      
-      
+
       # Add on selected HUCs (if any)
       selected_hucs <- isolate(session$userData$rv_clickedIds$ids)
       
@@ -265,7 +316,7 @@ module_sr_creation_map_server <- function(id, rv_formula_df, color_ramp) {
         huc_geom_sel$uid <- paste0("select|", huc_geom_sel$uid)
         
         # Add selected HUCs to map
-        if (session$userData$geom_type == "lines") {
+        if (current_geom_type == "lines") {
           line_weight <- 3
           if (!(is.null(
             isolate(session$userData$rv_HUC_layer_load$data$WIDTH)
@@ -280,17 +331,31 @@ module_sr_creation_map_server <- function(id, rv_formula_df, color_ramp) {
               weight = line_weight,
               smoothFactor = 0.5,
               opacity = 0.9,
-              #fillOpacity = 0.95,
-              #fillColor = "#4dfff3",
               highlightOptions = highlightOptions(
                 color = "#c2fffe",
                 weight = 4,
                 bringToFront = TRUE
               )
             )
-        }
-        
-        if (session$userData$geom_type == "polygons") {
+        } else if (current_geom_type == "points") {
+          # Selected points are slightly larger (radius + 4)
+          point_radius <- 12
+          if (!(is.null(isolate(session$userData$rv_HUC_layer_load$data$RADIUS)))) {
+            point_radius <- isolate(session$userData$rv_HUC_layer_load$data$RADIUS) + 4
+          }
+          leafletProxy("srcmap") %>%
+            addCircleMarkers(
+              data = huc_geom_sel,
+              layerId = huc_geom_sel$uid,
+              radius = point_radius,
+              color = "#c2fffe",
+              weight = 2,
+              opacity = 0.95,
+              fillOpacity = 0.95,
+              fillColor = "#4dfff3"
+            )
+        } else {
+          # Default to polygons
           leafletProxy("srcmap") %>%
             addPolygons(
               data = huc_geom_sel,
@@ -308,8 +373,7 @@ module_sr_creation_map_server <- function(id, rv_formula_df, color_ramp) {
               )
             )
         }
-        
-        
+
       }
     })
     
@@ -352,7 +416,7 @@ module_sr_creation_map_server <- function(id, rv_formula_df, color_ramp) {
       # User hovers mouse over a polygon (layer specific)
       srcmap_shape_mouseover_info <-
         input$srcmap_shape_mouseover
-      
+
       if (!(is.null(srcmap_shape_mouseover_info))) {
         # Parse the ID and HUC name
         session$userData$rv_map_shape(TRUE)
@@ -364,11 +428,37 @@ module_sr_creation_map_server <- function(id, rv_formula_df, color_ramp) {
         session$userData$rv_map_location$huc_id <- huc_id
         session$userData$rv_map_location$huc_name <- huc_name
         session$userData$rv_stressor_response$active_values_raw <- NULL
-        
+
       }
     })
-    
-    
+
+    # ---------------------------------------------------------
+    # Mouse-over and mouse-out events for markers (points)
+    # ---------------------------------------------------------
+    # Circle markers fire marker_mouseover/mouseout events
+    observeEvent(input$srcmap_marker_mouseout, {
+      session$userData$rv_map_shape(FALSE)
+      session$userData$rv_stressor_response$active_values_raw <- NULL
+    })
+
+    observeEvent(input$srcmap_marker_mouseover, {
+      # User hovers mouse over a point marker
+      marker_mouseover_info <- input$srcmap_marker_mouseover
+
+      if (!(is.null(marker_mouseover_info))) {
+        # Parse the ID and HUC name
+        session$userData$rv_map_shape(TRUE)
+        marker_obj <- marker_mouseover_info$id
+        parse_id <- strsplit(as.character(marker_obj), "\\|")[[1]]
+        huc_id <- parse_id[1]
+        huc_name <- parse_id[2]
+        session$userData$rv_map_location$huc_id <- huc_id
+        session$userData$rv_map_location$huc_name <- huc_name
+        session$userData$rv_stressor_response$active_values_raw <- NULL
+      }
+    })
+
+
     # ------------------------------------------
     # Update selected class on layer panel
     observe({

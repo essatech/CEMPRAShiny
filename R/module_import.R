@@ -20,18 +20,30 @@ module_import_ui <- function(id) {
         column(
           width = 12,
           tags$p(
-            "Click the ‘browse…’ button to upload files. Note that uploaded a new data source will overwrite all local changes and you will need to re-run your results. Stressor response files, stressor magnitude files and watershed polygons must all be validated externally, or you will experience errors. Please see notes below to ensure proper data format. See sample data at the link below to help match "
+            tags$b("To run a new scenario with your own data:"),
+            " Upload your Stressor Magnitude Workbook (.xlsx) containing location-specific stressor values. If your stressor variables differ from the defaults, you will also need to upload a matching Stressor Response Workbook. For a new study area, upload corresponding spatial data (watershed polygons or stream lines)."
+          ),
+          tags$p(
+            tags$b("Important:"),
+            " Uploading new Stressor-Response data will clear any existing model results and selections. You will need to re-run the Joe Model after uploading. Ensure that:"
+          ),
+          tags$ul(
+            tags$li("HUC_ID values in your Stressor Magnitude file match those in your spatial data"),
+            tags$li("Stressor names in the Magnitude file match those defined in the Stressor Response Workbook"),
+            tags$li("All required columns are present (see documentation for format specifications)")
+          ),
+          tags$p(
+            "For detailed formatting requirements and example datasets, see the links below:"
           ),
           tags$a(
             href = "https://mattjbayly.github.io/CEMPRA_documentation/05_data_inputs.html",
-            "See Guidance Document Help Section",
-            target =
-              "_blank"
+            icon("book"), " Data Input Format Guide",
+            target = "_blank"
           ),
           tags$br(),
           tags$a(
             href = "https://mattjbayly.github.io/CEMPRA_documentation/09_case_study_applications.html",
-            "Download Example Datasets Here",
+            icon("download"), " Download Example Datasets",
             target = "_blank"
           ),
           tags$p(""),
@@ -46,7 +58,20 @@ module_import_ui <- function(id) {
               id = "accordion1",
               accordionItem(title = "Stressor Response Workbook",
                             collapsed = TRUE,
-                            tagList(tags$p("...."), ))
+                            tagList(
+                              tags$p(tags$b("Format:"), " Excel workbook (.xlsx)"),
+                              tags$p("Defines how each stressor affects system capacity through dose-response curves."),
+                              tags$p(tags$b("Required worksheets:")),
+                              tags$ul(
+                                tags$li(tags$b("Main"), " - Index of all stressors with columns: ", tags$code("Stressors"), ", ", tags$code("Stressor_cat"), ", ", tags$code("Interaction"), ", ", tags$code("Linked"), ", ", tags$code("Stress_Scale"), ", ", tags$code("Function"), ", ", tags$code("Life_stages"), ", ", tags$code("Parameters")),
+                                tags$li(tags$b("Individual stressor worksheets"), " - One per stressor (name must match ", tags$code("Stressors"), " column exactly) with columns: ", tags$code("value"), " (raw stressor), ", tags$code("mean_system_capacity"), " (0-100), ", tags$code("sd"), ", ", tags$code("lwr"), ", ", tags$code("upr"))
+                              ),
+                              tags$a(
+                                href = "https://mattjbayly.github.io/CEMPRA_documentation/05_data_inputs.html#stressor-response-workbook",
+                                icon("external-link-alt"), " Full format specification",
+                                target = "_blank"
+                              )
+                            ))
             ),
             fileInput(
               ns("up_sr_wb_dat"),
@@ -68,7 +93,26 @@ module_import_ui <- function(id) {
               id = "accordion2",
               accordionItem(title = "Stressor Magnitude Workbook",
                             collapsed = TRUE,
-                            tagList(tags$p("...."), ))
+                            tagList(
+                              tags$p(tags$b("Format:"), " Excel workbook (.xlsx)"),
+                              tags$p("Contains measured or estimated stressor values at each location. This is the primary file for running new scenarios."),
+                              tags$p(tags$b("Required columns:")),
+                              tags$ul(
+                                tags$li(tags$code("HUC_ID"), " - Unique numeric location identifier (must match spatial data)"),
+                                tags$li(tags$code("NAME"), " - Location name (for display)"),
+                                tags$li(tags$code("Stressor"), " - Stressor name (must match Stressor Response Workbook)"),
+                                tags$li(tags$code("Stressor_cat"), " - Stressor category"),
+                                tags$li(tags$code("Mean"), " - Mean stressor value at this location"),
+                                tags$li(tags$code("SD"), " - Standard deviation (uncertainty)"),
+                                tags$li(tags$code("Distribution"), " - 'normal' or 'lognormal'"),
+                                tags$li(tags$code("Low_Limit"), ", ", tags$code("Up_Limit"), " - Bounds for stressor values")
+                              ),
+                              tags$a(
+                                href = "https://mattjbayly.github.io/CEMPRA_documentation/05_data_inputs.html#stressor-magnitude-file",
+                                icon("external-link-alt"), " Full format specification",
+                                target = "_blank"
+                              )
+                            ))
             ),
             fileInput(
               ns("up_sm_wb_dat"),
@@ -89,9 +133,27 @@ module_import_ui <- function(id) {
           width = 12,
           accordion(
             id = "accordion3",
-            accordionItem(title = "Watershed GIS Polygons or Lines (Spatial) [.gpkg or .shp]",
+            accordionItem(title = "Watershed GIS Polygons, Lines, or Points (Spatial) [.gpkg or .shp]",
                           collapsed = TRUE,
-                          tagList(tags$p("...."), ))
+                          tagList(
+                            tags$p(tags$b("Format:"), " GeoPackage (.gpkg) or Shapefile (.shp with .cpg, .dbf, .prj, .shx)"),
+                            tags$p("Spatial boundaries for your study locations. Can be watershed polygons, stream reach lines, or point locations."),
+                            tags$p(tags$b("Required attributes:")),
+                            tags$ul(
+                              tags$li(tags$code("HUC_ID"), " - Unique numeric identifier (must match Stressor Magnitude file)"),
+                              tags$li(tags$code("NAME"), " - Location name (optional but recommended)"),
+                              tags$li(tags$code("WIDTH"), " - Line weight/thickness (optional, for line geometry only)"),
+                              tags$li(tags$code("RADIUS"), " - Point marker size (optional, for point geometry only)")
+                            ),
+                            tags$p(tags$b("Coordinate system:"), " Data will be automatically transformed to WGS84 (EPSG:4326) if needed."),
+                            tags$p(tags$b("Geometry types supported:"), " Polygon, MultiPolygon, LineString, MultiLineString, Point, MultiPoint"),
+                            tags$p(tags$em("Note: For shapefiles, select all component files (.shp, .dbf, .shx, .prj, .cpg) when uploading.")),
+                            tags$a(
+                              href = "https://mattjbayly.github.io/CEMPRA_documentation/05_data_inputs.html#spatial-data",
+                              icon("external-link-alt"), " Full format specification",
+                              target = "_blank"
+                            )
+                          ))
           ),
           fileInput(
             ns("up_sheds"),
@@ -110,30 +172,11 @@ module_import_ui <- function(id) {
         width = 12,
         tags$h3("Optional Additional Inputs")
       )),
-      
-      
+
+
       fluidRow(
         column(
-          width = 5,
-          shinydashboard::box(
-            width = 12,
-            accordion(
-              id = "accordion4",
-              accordionItem(title = "Population Model Vital Rates",
-                            collapsed = TRUE,
-                            tagList(tags$p("...."), ))
-            ),
-            div(
-              "Upload life cycle profiles with for target species within the Population Model tab."
-            ),
-            div(style = "color: #ffffff; background: #ff000059; border-radius: 5px; margin: 5px;",
-                textOutput(ns(
-                  "upload_error_msg_vital"
-                )))
-          )
-        ),
-        column(
-          width = 5,
+          width = 10,
           shinydashboard::box(
           width = 12,
           accordion(
@@ -141,16 +184,37 @@ module_import_ui <- function(id) {
             accordionItem(title = "Socio-economic Input Workbook",
                           collapsed = TRUE,
                           tagList(
-                            tags$p(
-                              "The socio-economic component ultimately attempts to provide a high-level cost-benefit analysis of restoration alternatives, and is designed to facilitate decision-making by quantifying the economic implications of competing restoration strategies"
+                            tags$p(tags$b("Format:"), " Excel workbook (.xlsx)"),
+                            tags$p("Enables cost-benefit analysis of restoration actions by linking management interventions to stressor reductions and associated costs."),
+                            tags$p(tags$b("Required worksheets:")),
+                            tags$ul(
+                              tags$li(tags$b("Actions"), " - Define restoration actions with columns: ", tags$code("Action ID"), ", ", tags$code("Action Name"), ", ", tags$code("Description")),
+                              tags$li(tags$b("Location Implementation"), " - Specify where actions apply: ", tags$code("Location ID"), " (must match HUC_ID), ", tags$code("Action ID"), ", ", tags$code("Implementation Level")),
+                              tags$li(tags$b("Stressor Reduction"), " - Link actions to stressor improvements: ", tags$code("Action ID"), ", ", tags$code("Affected Stressor"), " (must match stressor names), ", tags$code("Reduction Amount")),
+                              tags$li(tags$b("Cost Estimates"), " - Economic data: ", tags$code("Action ID"), ", ", tags$code("Location ID"), ", ", tags$code("Capital Cost"), ", ", tags$code("Annual Operating Cost"))
+                            ),
+                            tags$p(tags$b("Key requirements:")),
+                            tags$ul(
+                              tags$li("Location IDs must match those in your Stressor Magnitude file"),
+                              tags$li("Stressor names must exactly match those in your Stressor Response Workbook"),
+                              tags$li("Costs can include uncertainty (Mean, SD, Distribution)")
+                            ),
+                            tags$p(tags$em("The socio-economic module runs Monte Carlo simulations to propagate cost uncertainties through the analysis.")),
+                            tags$a(
+                              href = "https://mattjbayly.github.io/CEMPRA_documentation/07_socio_economic_module.html",
+                              icon("external-link-alt"), " Socio-economic Module Guide",
+                              target = "_blank"
+                            ),
+                            tags$br(),
+                            tags$a(
+                              href = "https://mattjbayly.github.io/CEMPRA_documentation/05_data_inputs.html#socio-economic-workbook",
+                              icon("external-link-alt"), " Full format specification",
+                              target = "_blank"
                             )
                           ))
           ),
           module_import_se_workbook_ui(ns("module_import_se_workbook_main"))
         )
-          
-          
-          
         )
         
         
@@ -461,6 +525,9 @@ module_import_server <- function(id) {
                      
                      print("File loading....")
                      
+                     hmdl <- sf::st_zm(hmdl, drop = TRUE, what = "ZM")
+                     
+                     
                      # Change rendering order
                      # we want small polygons in front and large polygons behind
                      print("Review order...")
@@ -534,15 +601,17 @@ module_import_server <- function(id) {
                      bbox <- st_bbox(hmdl)
                      
                      # Determine geometry type and set
-                     # Determine if running with lines or polygons
-                     print("Determine if running with lines or polygons...")
+                     # Determine if running with lines, polygons, or points
+                     print("Determine geometry type (lines, polygons, or points)...")
                      geom_type <-
                        st_geometry_type(hmdl)
-                     
+
                      print("Loading leaflet first time...")
-                     
+
                      if (unique(geom_type)[1] %in% c("LINESTRING", "MULTILINESTRING")) {
                        session$userData$geom_type <- "lines"
+                     } else if (unique(geom_type)[1] %in% c("POINT", "MULTIPOINT")) {
+                       session$userData$geom_type <- "points"
                      } else {
                        session$userData$geom_type <- "polygons"
                      }
