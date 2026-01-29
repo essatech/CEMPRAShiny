@@ -199,10 +199,51 @@ module_joe_model_csc_plots_server <- function(id) {
         # Get the Joe Model result object
         plot_df <- jmr$ce.df
         plot_df$HUC <- as.character(plot_df$HUC)
-        
+
+        # Get NAME data from stressor magnitude to create better labels
+        sm_dat <- session$userData$rv_stressor_magnitude$sm_dat
+        if (!is.null(sm_dat) && "NAME" %in% colnames(sm_dat) && "HUC_ID" %in% colnames(sm_dat)) {
+          # Get unique HUC_ID to NAME mapping
+          name_lookup <- sm_dat %>%
+            dplyr::select(HUC_ID, NAME) %>%
+            dplyr::distinct(HUC_ID, .keep_all = TRUE) %>%
+            dplyr::mutate(HUC_ID = as.character(HUC_ID))
+
+          # Create facet label: truncate NAME if > 10 chars, format as "NAME, ID:HUC_ID"
+          name_lookup <- name_lookup %>%
+            dplyr::mutate(
+              NAME_trunc = ifelse(nchar(NAME) > 10, paste0(substr(NAME, 1, 10), "..."), NAME),
+              facet_label = paste0(NAME_trunc, ", ID:", HUC_ID)
+            )
+
+          # Join to plot_df
+          plot_df <- plot_df %>%
+            dplyr::left_join(name_lookup, by = c("HUC" = "HUC_ID"))
+
+          # For any HUCs without NAME, use just the HUC ID
+          plot_df <- plot_df %>%
+            dplyr::mutate(facet_label = ifelse(is.na(facet_label), paste0("ID:", HUC), facet_label))
+
+          # Order by NAME then HUC_ID for facet display
+          plot_df <- plot_df %>%
+            dplyr::arrange(NAME, as.numeric(HUC))
+
+          # Convert facet_label to factor with ordered levels
+          label_order <- plot_df %>%
+            dplyr::distinct(facet_label, NAME, HUC) %>%
+            dplyr::arrange(NAME, as.numeric(HUC)) %>%
+            dplyr::pull(facet_label)
+          plot_df$facet_label <- factor(plot_df$facet_label, levels = unique(label_order))
+        } else {
+          # Fallback: use HUC as facet label
+          plot_df$facet_label <- paste0("ID:", plot_df$HUC)
+          plot_df$facet_label <- factor(plot_df$facet_label,
+            levels = unique(plot_df$facet_label[order(as.numeric(plot_df$HUC))]))
+        }
+
         # Median by plot
-        plot_df_median <- plot_df %>% group_by(HUC) %>% summarise(median = median(CE, na.rm = TRUE))
-        plot_df_mean <- plot_df %>% group_by(HUC) %>% summarise(mean = mean(CE))
+        plot_df_median <- plot_df %>% group_by(facet_label) %>% summarise(median = median(CE, na.rm = TRUE))
+        plot_df_mean <- plot_df %>% group_by(facet_label) %>% summarise(mean = mean(CE))
         
         # Set Andy theme
         andy_theme <- theme(
@@ -240,7 +281,7 @@ module_joe_model_csc_plots_server <- function(id) {
           scale_color_manual(name = "statistics",
                              values = c(median = "blue", mean = "red")) +
           scale_x_continuous(limits = c(0, 1)) +
-          facet_wrap( ~ HUC, ncol = 5) +
+          facet_wrap( ~ facet_label, ncol = 5) +
           geom_rect(
             data = data.frame(
               xmin = 0,

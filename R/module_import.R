@@ -401,8 +401,9 @@ module_import_server <- function(id) {
                      # First reset the stressor response workbook
                      start_time <- Sys.time()
                      
+                     # Use isolate() to prevent re-running when stressor_names changes
                      session$userData$rv_stressor_response$active_layer <-
-                       session$userData$rv_stressor_response$stressor_names[1]
+                       isolate(session$userData$rv_stressor_response$stressor_names[1])
                      session$userData$rv_stressor_response$active_values_raw <-
                        NULL
                      session$userData$rv_stressor_response$active_values_response <-
