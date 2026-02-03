@@ -597,7 +597,7 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
                             ns("generate_location_plot"),
                             label = tagList(icon("chart-bar"), " Generate Location Plot"),
                             class = "btn btn-primary",
-                            style = "margin-bottom: 15px;"
+                            style = "margin-bottom: 15px; color: white;"
                           ),
                           uiOutput(ns("location_sr_plot_ui"))
                         )
@@ -956,10 +956,14 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
         req(location_plot_trigger() > 0)
 
         # Calculate dynamic height based on number of locations
+        # Filter to only locations with valid data for this stressor
         sm_dat <- session$userData$rv_stressor_magnitude$sm_dat
         this_var <- session$userData$rv_stressor_response$active_layer
-        n_locations <- length(unique(sm_dat$HUC_ID))
-        plot_height <- max(300, min(n_locations * 20, 800))
+        sm_sub <- sm_dat[sm_dat$Stressor == this_var & !is.na(sm_dat$Mean), ]
+        n_locations <- length(unique(sm_sub$HUC_ID))
+
+        # Scale height with number of locations (14px per location, minimum 300px)
+        plot_height <- max(300, n_locations * 14)
 
         tagList(
           plotOutput(ns("location_sr_dotplot"), height = paste0(plot_height, "px"), width = "100%")
@@ -977,8 +981,8 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
         # Get stressor magnitude data
         sm_dat <- session$userData$rv_stressor_magnitude$sm_dat
 
-        # Filter for the target stressor
-        sm_sub <- sm_dat[sm_dat$Stressor == this_var, ]
+        # Filter for the target stressor and omit locations with missing/NA values
+        sm_sub <- sm_dat[sm_dat$Stressor == this_var & !is.na(sm_dat$Mean), ]
 
         if(nrow(sm_sub) == 0) {
           plot.new()
@@ -988,6 +992,14 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
 
         # Get stressor-response data to calculate scores
         sr_dat <- session$userData$rv_stressor_response$sr_dat[[this_var]]
+
+        # Check if SR data exists for this stressor
+        if(is.null(sr_dat) || nrow(sr_dat) == 0) {
+          plot.new()
+          text(0.5, 0.5, "No stressor-response curve defined for this stressor", cex = 1.2)
+          return()
+        }
+
         main_sheet <- session$userData$rv_stressor_response$main_sheet
         stress_scale <- main_sheet$Stress_Scale[main_sheet$Stressors == this_var]
         func_type <- main_sheet$Function[main_sheet$Stressors == this_var]
@@ -1025,6 +1037,18 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
           calculate_sr_score(x, sr_dat, stress_scale, func_type)
         })
 
+        # Remove locations with NA scores
+        sm_sub <- sm_sub[!is.na(sm_sub$SR_Score), ]
+
+        if(nrow(sm_sub) == 0) {
+          plot.new()
+          text(0.5, 0.5, "No valid SR scores could be calculated", cex = 1.2)
+          return()
+        }
+
+        # Get NAME column if it exists, otherwise use empty strings
+        name_col <- if("NAME" %in% colnames(sm_sub)) sm_sub$NAME else rep("", nrow(sm_sub))
+
         # Create location labels (HUC_ID - NAME, max 20 chars)
         sm_sub$Location_Label <- mapply(function(huc_id, name) {
           if(is.na(name) || name == "") {
@@ -1036,7 +1060,7 @@ module_stressor_variable_server <- function(id, stressor_index = NA) {
             label <- paste0(substr(label, 1, 17), "...")
           }
           return(label)
-        }, sm_sub$HUC_ID, sm_sub$NAME, SIMPLIFY = TRUE)
+        }, sm_sub$HUC_ID, name_col, SIMPLIFY = TRUE)
 
         # Sort by SR_Score (highest to lowest)
         sm_sub <- sm_sub[order(sm_sub$SR_Score, decreasing = FALSE), ]

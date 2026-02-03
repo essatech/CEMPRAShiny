@@ -112,10 +112,27 @@ module_scenario_csc_server <- function(id) {
                            )
                          ),
 
-                         # Main comparison plot (always visible)
+                         # Main comparison plots (tabbed)
                          tags$div(
                            class = "scenario-main-plot",
-                           plotlyOutput(ns("scenario_boxplots"), height = "350px")
+                           tabsetPanel(
+                             id = ns("plot_tabs"),
+                             type = "tabs",
+                             tabPanel(
+                               "Boxplot",
+                               tags$div(
+                                 style = "padding-top: 10px;",
+                                 plotlyOutput(ns("scenario_boxplots"), height = "350px")
+                               )
+                             ),
+                             tabPanel(
+                               "Barplot",
+                               tags$div(
+                                 style = "padding-top: 10px;",
+                                 plotlyOutput(ns("scenario_barplots"), height = "350px")
+                               )
+                             )
+                           )
                          ),
 
                          # Collapsible: Advanced Options
@@ -363,6 +380,170 @@ module_scenario_csc_server <- function(id) {
 
                      } else {
                        # No matching stressor magntidue data
+                       print("Empty data...")
+                       p <- ggplot(data.frame())
+                       return(p)
+                     }
+                   } # end of alt summary method
+
+                   return(ggplotly(p))
+
+                 })
+
+
+                 # ---------------------------------------------
+                 # Barplot showing median values (0-100 scale)
+                 # ---------------------------------------------
+                 output$scenario_barplots <- renderPlotly({
+
+                   print("render scenario_barplots...")
+
+                   jm_data <-
+                     session$userData$rv_joe_model_results_scenarios$sims
+
+                   if(length(jm_data) == 0) {
+                     print("Empty data...")
+                     p <- ggplot(data.frame()) +
+                       theme_minimal() +
+                       labs(title = "No scenarios yet",
+                            subtitle = "Run the Joe Model to create your first scenario")
+                     return(ggplotly(p))
+                   }
+
+                   # Get data for current run
+                   gather_ce <- function(x) {
+                     t_dat <- x$ce.df
+                     return(t_dat)
+                   }
+
+                   all_dat <- lapply(jm_data, gather_ce)
+                   all_dat <- do.call("rbind", all_dat)
+                   all_dat$scenario_name <-
+                     as.character(all_dat$scenario_name)
+
+                   # Add the MCMC batch replicate to the data
+                   add_batch_id <- function(df) {
+                     df %>%
+                       group_by(HUC, scenario_name) %>%
+                       mutate(batch_id = row_number()) %>%
+                       ungroup()
+                   }
+
+                   all_dat <- add_batch_id(all_dat)
+
+                   # Get options from select inputs
+                   location_weighting <- input$location_weighting
+                   weighting_type <- input$weighting_type
+                   y_lab <- input$custom_y_lab
+
+                   # ==========================================================
+                   # If working with a simple unweighted mean
+                   # ==========================================================
+                   if(length(weighting_type) == 0) {
+                     weighting_type <- "Unweighted Mean (%)"
+                   }
+                   if(is.na(weighting_type)) {
+                     weighting_type <- "Unweighted Mean (%)"
+                   }
+                   if(weighting_type == "Unweighted Mean (%)") {
+
+                     if (length(jm_data) == 0) {
+                       print("Empty data...")
+                       p <- ggplot(data.frame())
+                       return(p)
+                     }
+
+                     all_dat$CE <-
+                       round(as.numeric(all_dat$CE * 100), 2)
+
+                     # Group by location and batch, then calculate median across scenarios
+                     m2 <- all_dat %>% group_by(scenario_name, batch_id) %>%
+                       summarise(CE = mean(CE, na.rm = TRUE)) %>%
+                       ungroup()
+
+                     # Now calculate median across batch replicates for each scenario
+                     m3 <- m2 %>% group_by(scenario_name) %>%
+                       summarise(CE_median = median(CE, na.rm = TRUE)) %>%
+                       mutate(scenario_name = factor(scenario_name, levels = unique(scenario_name)))
+
+                     # Create the barplot
+                     p <-
+                       ggplot(m3, aes(x = scenario_name, y = CE_median, fill = scenario_name)) +
+                       geom_bar(stat = "identity", alpha = 0.7) +
+                       coord_cartesian(ylim = c(0, 100)) +
+                       theme_minimal() +
+                       theme(legend.position = "none",
+                             axis.text.x = element_text(angle = 45, hjust = 1)) +
+                       labs(x = NULL, y = "Cumulative System Capacity (%)")
+                   }
+
+                   # ==========================================================
+                   # If working with a weighted mean or product
+                   # ==========================================================
+                   if(weighting_type != "Unweighted Mean (%)") {
+
+                     print("alt weighting_type selected for barplot...")
+
+                     # Get the associated stressor magnitude data
+                     sm_data <- session$userData$rv_stressor_magnitude$sm_dat
+
+                     # Determine if target metric is available
+                     sm_data <- sm_data[sm_data$Stressor == location_weighting, ]
+
+                     if(nrow(sm_data) > 0) {
+                       sm_data <- sm_data[, c("HUC_ID", "Mean")]
+                       all_dat <- merge(all_dat, sm_data, by.x = "HUC", by.y = "HUC_ID", all.x = TRUE, all.y = FALSE)
+                       # Drop any NA values
+                       all_dat <- all_dat[!is.na(all_dat$Mean), ]
+
+                       # Calculate weighted mean and product
+                       if(weighting_type == "Weighted Mean (%)") {
+                         m2 <- all_dat %>% group_by(scenario_name, batch_id) %>%
+                           summarise(CE_adj = weighted.mean(CE, w = Mean, na.rm = TRUE)) %>%
+                           ungroup()
+
+                         # Calculate median across batch replicates
+                         m3 <- m2 %>% group_by(scenario_name) %>%
+                           summarise(CE_median = median(CE_adj, na.rm = TRUE)) %>%
+                           mutate(scenario_name = factor(scenario_name, levels = unique(scenario_name)))
+                       }
+
+                       # and product
+                       if(weighting_type == "Product (custom)") {
+
+                         all_dat$product_calc <- all_dat$CE * all_dat$Mean
+
+                         m2 <- all_dat %>% group_by(scenario_name, batch_id) %>%
+                           summarise(CE_adj = sum(product_calc, na.rm = TRUE)) %>%
+                           ungroup()
+
+                         # Calculate median across batch replicates
+                         m3 <- m2 %>% group_by(scenario_name) %>%
+                           summarise(CE_median = median(CE_adj, na.rm = TRUE)) %>%
+                           mutate(scenario_name = factor(scenario_name, levels = unique(scenario_name)))
+                       }
+
+                       # Determine y-axis limits for weighted/product methods
+                       # For weighted mean, keep 0-100; for product, use dynamic range
+                       if(weighting_type == "Weighted Mean (%)") {
+                         y_limits <- c(0, 100)
+                       } else {
+                         # Product can exceed 100, use data range
+                         y_limits <- c(0, max(m3$CE_median, na.rm = TRUE) * 1.1)
+                       }
+
+                       # Create the barplot
+                       p <-
+                         ggplot(m3, aes(x = scenario_name, y = CE_median, fill = scenario_name)) +
+                         geom_bar(stat = "identity", alpha = 0.7) +
+                         coord_cartesian(ylim = y_limits) +
+                         theme_minimal() +
+                         theme(legend.position = "none",
+                               axis.text.x = element_text(angle = 45, hjust = 1)) +
+                         labs(x = NULL, y = y_lab)
+
+                     } else {
+                       # No matching stressor magnitude data
                        print("Empty data...")
                        p <- ggplot(data.frame())
                        return(p)
