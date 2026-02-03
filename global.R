@@ -62,7 +62,8 @@ options(
 # file_name_stressor_response <- "./data/nanaimo/Stressor_Response.xlsx"
 # file_name_stressor_response <- "./data/ifc/stressor_response.xlsx"
 # file_name_stressor_response <- "./data/nicola_pop/stressor_response.xlsx"
-file_name_stressor_response <- "./data/nd_ss/Stressor Response - Salish Sucker.xlsx"
+# file_name_stressor_response <- "./data/nd_ss/Stressor Response - Salish Sucker.xlsx"
+file_name_stressor_response <- "./data/nd_ss/Stressor Response - Nooksack Dace.xlsx"
 
 sr_wb_dat <- CEMPRA::StressorResponseWorkbook(filename = file_name_stressor_response)
 
