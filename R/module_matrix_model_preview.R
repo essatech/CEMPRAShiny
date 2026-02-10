@@ -679,6 +679,7 @@ module_matrix_model_preview_server <- function(id) {
         return(obj)
       }
       
+      
       # Mege to a single clean data frame
       pdata_1 <- lapply(pdat, get_n_obj, name = t_var)
       pdata_1 <- do.call("rbind", pdata_1)
@@ -757,6 +758,9 @@ module_matrix_model_preview_server <- function(id) {
         
         # Update stage names
         selected_stages <- gsub("V", "K", selected_stages)
+        
+        # Added Feb 2 2025 - to match
+        colnames(pdata_1) <- gsub("V", "K", colnames(pdata_1))
         
         # Set burn-in years
         burn_in <- 0

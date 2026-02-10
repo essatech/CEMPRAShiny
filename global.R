@@ -44,6 +44,16 @@ library(DiagrammeR)
 library(rhandsontable)
 
 
+# Choose default files to load for Joe Model:
+file_name_stressor_response <- "./data/nd/Stressor Response - Nooksack Dace.xlsx"
+file_name_stressor_magnitude <- "./data/nd/Stressor Magnitude _ Nooksack Dace.xlsx"
+fname_locations <- "./data/nd/Locations_Nooksack_Dace.gpkg"
+
+# Choose default files to load for LCM:
+life_stages <- read.csv("./data/nicola_pop/chinook_life_cycle_profile.csv")
+hab_dens <- read.csv("./data/nicola_pop/habitat_densities.csv")
+
+
 # Set options
 options(
   spinner.color = "#ffffff",
@@ -56,15 +66,6 @@ options(
 # options(shiny.error = browser)
 
 # Load stressor-response relationships
-# file_name_stressor_response <- "./data/stressor_response_demo.xlsx"
-# file_name_stressor_response <- "./data/ns_ss_sr.xlsx"
-# file_name_stressor_response <- "./data/parkinson_2016/Stressor_Response_Parkinson_2016.xlsx"
-# file_name_stressor_response <- "./data/nanaimo/Stressor_Response.xlsx"
-# file_name_stressor_response <- "./data/ifc/stressor_response.xlsx"
-# file_name_stressor_response <- "./data/nicola_pop/stressor_response.xlsx"
-# file_name_stressor_response <- "./data/nd_ss/Stressor Response - Salish Sucker.xlsx"
-file_name_stressor_response <- "./data/nd_ss/Stressor Response - Nooksack Dace.xlsx"
-
 sr_wb_dat <- CEMPRA::StressorResponseWorkbook(filename = file_name_stressor_response)
 
 # Record start time
@@ -72,43 +73,18 @@ start_time <- Sys.time()
 
 
 # Load stressor magnitude values associated with each HUC
-# file_name_stressor_magnitude <- "./data/stressor_magnitude_demo.xlsx"
-# file_name_stressor_magnitude <- "./data/nd_ss_sm.xlsx"
-# file_name_stressor_magnitude <- "./data/parkinson_2016/Stressor_Magnitude_Parkinson_2016.xlsx"
-# file_name_stressor_magnitude <- "./data/nanaimo/Stressor_Magnitude_wd.xlsx"
-# file_name_stressor_magnitude <- "./data/ifc/stressor_magnitude_IFC.xlsx"
-# file_name_stressor_magnitude <- "./data/nicola_pop/stressor_magnitude_wd.xlsx"
-file_name_stressor_magnitude <- "./data/nd_ss/Stressor Magnitude - Base Case.xlsx"
-
 sm_wb_dat <- CEMPRA::StressorMagnitudeWorkbook(filename = file_name_stressor_magnitude, scenario_worksheet = 1)
 
 
 # Load life stages for the population model from CSV file
-# life_stages <- read.csv("./data/TEST.csv")
-# life_stages <- read.csv("./data/life cycles.csv")
-# life_stages <- read.csv("./data/nanaimo/Life_Cycle.csv")
-# life_stages <- read.csv("./data/ifc/Life_Cycles_Profile_IFC_historic.csv")
-life_stages <- read.csv("./data/nicola_pop/chinook_life_cycle_profile.csv")
-
 life_stages <- CEMPRA::pop_model_dat_clean(dat = life_stages, nstage_fill = 10)
 
-# Load habitat densities from CSV file
-# hab_dens <- read.csv("./data/nanaimo/Habitat_Capacities.csv")
-# hab_dens <- read.csv("./data/ifc/Habitat_Capacities_IFC.csv")
-hab_dens <- read.csv("./data/nicola_pop/habitat_densities.csv")
-
-
+# Clean habitat density file
 hab_dens <- CEMPRA::pop_model_hab_dens_clean(hab_dens = hab_dens)
 
 
 # Load and process map geometry and map object reactive values
-# hmdl <- sf::st_read("./data/watersheds.gpkg")
-# hmdl <- sf::st_read("./data/nd_ss_loc2.gpkg")
-# hmdl <- sf::st_read("./data/parkinson_2016/Locations_Parkinson_2016.gpkg")
-# hmdl <- sf::st_read("./data/nanaimo/reaches_populations.gpkg")
-# hmdl <- sf::st_read("./data/ifc/fraser_polygon_4326.gpkg")
-# hmdl <- sf::st_read("./data/nicola_pop/locations.gpkg")
-hmdl <- sf::st_read("./data/nd_ss/NDSS Base Case.gpkg")
+hmdl <- sf::st_read(fname_locations)
 
 if(!("HUC_ID" %in% colnames(hmdl))){
   # set the values in the first column to HUC_ID
