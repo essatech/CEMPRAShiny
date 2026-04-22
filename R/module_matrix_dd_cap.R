@@ -5,18 +5,31 @@ module_matrix_dd_cap_ui <- function(id) {
 
   ns <- NS(id)
   tagList(
-    tags$h4("Define Density Dependence Location Capacities"),
+    tags$h4("Location-Specific Carrying Capacities (K)"),
 
     tags$p(
-      "This table specifies the ", tags$strong("maximum carrying capacity (K)"), " for each life stage
-      at each location. When density-dependent bottlenecks are defined above (e.g., ", tags$code("bh_stage_1"), "),
-      the model uses these K values to constrain population growth via Beverton-Holt or Hockey-Stick functions.",
+      "This table sets the ", tags$strong("maximum number of individuals (K)"), " for each life stage ",
+      "at each location. Each K column corresponds to a ", tags$strong("destination stage"),
+      " \u2014 the stage that individuals are entering or occupying. ",
+      "Only stages with a DD bottleneck defined above will use these values; other columns are ignored.",
       class = "pm-ht"
     ),
 
+    tags$div(
+      style = "background-color: #e9ecef; border: 1px solid #ced4da; border-left: 4px solid #6c757d; padding: 10px; border-radius: 4px; margin-bottom: 12px;",
+      tags$span(
+        style = "font-size: 13px; color: #343a40;",
+        tags$strong("Remember: "), "column names refer to the destination stage. ",
+        tags$code("k_stage_1_mean"), " = how many individuals stage 1 can hold (constraining the fry \u2192 stage-1 transition for BH, ",
+        "or capping stage-1 abundance for HS). ",
+        tags$code("k_stage_0_mean"), " = fry capacity (constraining egg \u2192 fry). ",
+        tags$code("k_spawners_mean"), " = total spawner capacity across all mature ages."
+      )
+    ),
+
     tags$p(
-      "You can edit capacity values directly in the table below (columns 3+), or upload a habitat capacities
-      CSV file using the file uploader at the top of this page. The first two columns (HUC_ID and NAME) are locked.",
+      "You can edit values directly in the table below (columns 3+), or upload a habitat capacities ",
+      "CSV file from the Upload Data tab. The first two columns (HUC_ID and NAME) are locked.",
       class = "pm-ht"
     ),
 

@@ -1,28 +1,15 @@
 #' Matrix Model LTRE UI
 module_matrix_model_ltre_ui <- function(id) {
   ns <- NS(id)
-  
+
   tagList(
-    tags$b("Sensitivity Tests", style = "text-align: center;"),
+    tags$b("Sensitivity Analysis", style = "text-align: center;"),
     tags$div(
       class = "lam_bb",
       tags$p(
-        "Run a sensitivity tests by increasing and decreasing parameters by a fraction",
+        "Run a global sensitivity analysis using Monte Carlo sampling and PRCC-based parameter rankings to identify which demographic parameters most influence population growth rate (lambda)."
       ),
-      
-      fluidRow(
-        column(
-          width = 6,
-          numericInput(ns("test_n_adjust"), label = "adjust params by fraction", value = 0.05)
-        ),
-        column(width = 6, numericInput(
-          ns("test_n_replicates"),
-          label = "n replicates",
-          value = 10
-        ))
-      ),
-      
-      actionButton(ns("ltre_projection"), "Run Sensitivity Test on Productivity")
+      actionButton(ns("open_ltre_modal"), "LTRE Range Analysis")
     )
   )
 }
@@ -32,371 +19,384 @@ module_matrix_model_ltre_ui <- function(id) {
 module_matrix_model_ltre_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    
+
     print("module_matrix_model_ltre_server...")
-    
-    #-------------------------------------------------------
-    # Run parameter sensitivity test...
-    #-------------------------------------------------------
-    observeEvent(input$ltre_projection, {
-      # Show a loading spinner to the user
-      show_modal_spinner(
+
+    # Reactive state
+    ltre_table_data   <- reactiveVal(NULL)   # Visible/editable rows only
+    ltre_hidden_data  <- reactiveVal(NULL)   # Hidden structural rows (Nstage, k, etc.)
+    ltre_result       <- reactiveVal(NULL)
+    stored_n_samples  <- reactiveVal(1000)
+
+    # ----------------------------------------------------------
+    # Helper: build the modal dialog
+    # ----------------------------------------------------------
+    build_modal <- function() {
+
+      results_ui <- NULL
+      res <- ltre_result()
+
+      if (!is.null(res)) {
+        results_ui <- tagList(
+          tags$hr(),
+          tags$h4("Lambda Distribution"),
+          textOutput(ns("ltre_lambda_summary")),
+          plotOutput(ns("ltre_lambda_hist"), height = "350px"),
+          tags$h4("Parameter Sensitivity Rankings"),
+          tags$p(
+            "The bar chart below ranks parameters by their Partial Rank Correlation",
+            "Coefficient (PRCC) with lambda. PRCC measures the strength of the monotonic",
+            "relationship between each parameter and lambda after removing the linear",
+            "effects of all other parameters, making it a robust measure of global sensitivity.",
+            "Parameters with higher absolute PRCC values have a stronger independent influence",
+            "on population growth rate. Blue bars indicate statistically significant correlations",
+            "(p < 0.01); coral bars indicate non-significant correlations, which may still be",
+            "meaningful but should be interpreted with caution."
+          ),
+          plotOutput(ns("ltre_prcc_barplot"), height = "450px"),
+          tags$h4("Top 10 Parameters"),
+          DT::DTOutput(ns("ltre_prcc_table"))
+        )
+      }
+
+      modalDialog(
+        title = "LTRE Range Analysis",
+        size = "l",
+        easyClose = TRUE,
+        footer = NULL,
+
+        tagList(
+          tags$p(
+            "A Life Table Response Experiment (LTRE) identifies which demographic parameters",
+            "have the greatest influence on population growth rate (lambda). This analysis uses",
+            "Monte Carlo sampling from user-defined distributions and Partial Rank Correlation",
+            "Coefficients (PRCC) for global sensitivity analysis."
+          ),
+          tags$p(
+            "Edit the table below to specify which parameters to test. Set",
+            tags$b("Test_Parameter"), "to TRUE for parameters you want to include in the",
+            "analysis, then specify a Distribution type (normal, beta, or pert), the SD",
+            "(for normal/beta), and the Low_Limit and Up_Limit bounds for sampling."
+          ),
+          tags$p(
+            "Parameters left as FALSE will be held at their current Value. At least one",
+            "parameter must be set to TRUE before running the analysis."
+          ),
+          tags$p(
+            "For more advanced usage and scripting, this analysis can also be run directly",
+            "in R using", tags$code("CEMPRA::pop_model_ltre_range()"), ".",
+            "See the function documentation for details on customizing distributions,",
+            "sample sizes, and working with the full results object."
+          ),
+
+          rhandsontable::rHandsontableOutput(ns("ltre_params_table")),
+
+          tags$br(),
+
+          fluidRow(
+            column(4, numericInput(ns("n_samples"), "Monte Carlo Samples",
+                                   value = isolate(stored_n_samples()),
+                                   min = 100, max = 10000, step = 100)),
+            column(4, actionButton(ns("run_ltre"), "Run Analysis",
+                                   class = "btn-primary", icon = icon("play"))),
+            column(4, uiOutput(ns("run_ltre_msg")))
+          ),
+
+          results_ui
+        )
+      )
+    }
+
+    # ----------------------------------------------------------
+    # Step 1: Open Modal
+    # ----------------------------------------------------------
+    observeEvent(input$open_ltre_modal, {
+
+      dat <- session$userData$rv_life_stages$dat
+
+      # Add extended columns to full data
+      ext_df <- dat
+      ext_df$Test_Parameter <- FALSE
+      ext_df$Distribution   <- "normal"
+      ext_df$SD             <- NA_real_
+      ext_df$Low_Limit      <- NA_real_
+      ext_df$Up_Limit       <- NA_real_
+      ext_df$Notes          <- ""
+
+      # Split into hidden structural rows and visible editable rows
+      exclude <- ext_df$Name %in% c("Nstage", "anadromous", "k") |
+        grepl("^hs_", ext_df$Name) |
+        grepl("^bh_", ext_df$Name)
+      ltre_hidden_data(ext_df[exclude, , drop = FALSE])
+
+      visible_df <- ext_df[!exclude, , drop = FALSE]
+
+      # Truncate Parameters display to 25 characters
+      visible_df$Parameters <- ifelse(
+        nchar(as.character(visible_df$Parameters)) > 25,
+        paste0(substr(as.character(visible_df$Parameters), 1, 22), "..."),
+        as.character(visible_df$Parameters)
+      )
+
+      ltre_table_data(visible_df)
+      ltre_result(NULL)
+
+      showModal(build_modal())
+    })
+
+    # ----------------------------------------------------------
+    # Step 2: Editable Table
+    # ----------------------------------------------------------
+    output$ltre_params_table <- rhandsontable::renderRHandsontable({
+      df <- ltre_table_data()
+      req(df)
+
+      # Subset to display columns
+      display_df <- df[, c("Parameters", "Name", "Value",
+                            "Test_Parameter", "Distribution",
+                            "SD", "Low_Limit", "Up_Limit"), drop = FALSE]
+
+      tbl_height <- min(500, 30 + nrow(display_df) * 25)
+
+      rhandsontable::rhandsontable(display_df, height = tbl_height,
+                                    stretchH = "all", rowHeaders = NULL) |>
+        rhandsontable::hot_col("Parameters", readOnly = TRUE) |>
+        rhandsontable::hot_col("Name", readOnly = TRUE) |>
+        rhandsontable::hot_col("Value", type = "numeric") |>
+        rhandsontable::hot_col("Test_Parameter", type = "checkbox") |>
+        rhandsontable::hot_col("Distribution", type = "dropdown",
+                               source = c("normal", "beta", "pert")) |>
+        rhandsontable::hot_col("SD", type = "numeric") |>
+        rhandsontable::hot_col("Low_Limit", type = "numeric") |>
+        rhandsontable::hot_col("Up_Limit", type = "numeric")
+    })
+
+    # Sync edits back
+    observeEvent(input$ltre_params_table, {
+      updated <- rhandsontable::hot_to_r(input$ltre_params_table)
+      # Preserve Notes column from the full data
+      full <- ltre_table_data()
+      if (!is.null(full) && "Notes" %in% names(full)) {
+        updated$Notes <- full$Notes
+      } else {
+        updated$Notes <- ""
+      }
+      ltre_table_data(updated)
+    })
+
+    # ----------------------------------------------------------
+    # Step 3: Validation and Run Button State
+    # ----------------------------------------------------------
+    can_run <- reactive({
+      df <- ltre_table_data()
+      if (is.null(df)) return(FALSE)
+
+      test_rows <- which(df$Test_Parameter == TRUE)
+      if (length(test_rows) == 0) return(FALSE)
+
+      for (i in test_rows) {
+        val <- as.numeric(df$Value[i])
+        low <- as.numeric(df$Low_Limit[i])
+        high <- as.numeric(df$Up_Limit[i])
+        sd_val <- as.numeric(df$SD[i])
+        dist <- tolower(trimws(as.character(df$Distribution[i])))
+
+        if (is.na(val)) return(FALSE)
+        if (is.na(low) || is.na(high)) return(FALSE)
+        if (low >= high) return(FALSE)
+
+        if (dist %in% c("normal", "beta")) {
+          if (is.na(sd_val) || sd_val <= 0) return(FALSE)
+        }
+      }
+      TRUE
+    })
+
+    observe({
+      shinyjs::toggleState("run_ltre", condition = can_run())
+    })
+
+    # Validation message explaining why Run is disabled
+    output$run_ltre_msg <- renderUI({
+      df <- ltre_table_data()
+      if (is.null(df)) {
+        return(tags$span("Loading table...", style = "color: grey; font-style: italic; line-height: 34px;"))
+      }
+
+      test_rows <- which(df$Test_Parameter == TRUE)
+      if (length(test_rows) == 0) {
+        return(tags$span("Set at least one parameter's Test_Parameter to TRUE.",
+                         style = "color: #c0392b; font-style: italic; line-height: 34px;"))
+      }
+
+      # Check each selected row for issues
+      issues <- character(0)
+      for (i in test_rows) {
+        nm <- df$Name[i]
+        val <- as.numeric(df$Value[i])
+        low <- as.numeric(df$Low_Limit[i])
+        high <- as.numeric(df$Up_Limit[i])
+        sd_val <- as.numeric(df$SD[i])
+        dist <- tolower(trimws(as.character(df$Distribution[i])))
+
+        if (is.na(val)) {
+          issues <- c(issues, paste0(nm, ": Value is missing."))
+        } else if (is.na(low) || is.na(high)) {
+          issues <- c(issues, paste0(nm, ": Low_Limit and Up_Limit are required."))
+        } else if (low >= high) {
+          issues <- c(issues, paste0(nm, ": Low_Limit must be less than Up_Limit."))
+        } else if (dist %in% c("normal", "beta") && (is.na(sd_val) || sd_val <= 0)) {
+          issues <- c(issues, paste0(nm, ": SD must be > 0 for ", dist, " distribution."))
+        }
+      }
+
+      if (length(issues) > 0) {
+        return(tags$span(issues[1],
+                         style = "color: #c0392b; font-style: italic; line-height: 34px;"))
+      }
+
+      # All good
+      return(NULL)
+    })
+
+    # ----------------------------------------------------------
+    # Step 4: Run Analysis
+    # ----------------------------------------------------------
+    observeEvent(input$run_ltre, {
+
+      shinybusy::show_modal_spinner(
         spin = "hollow-dots",
         color = "#0073b7",
-        text = paste0("Running parameter sensitivity test...")
+        text = "Running LTRE Range Analysis... This may take a moment."
       )
-      
-      # -----------------------------------
-      # Gather inputs in isolate mode
-      isolate({
-        # Modal is hidden or reset
-        session$userData$rv_show_ltre_plot$open <- FALSE
-        
-        test_n_adjust <- input$test_n_adjust
-        test_n_replicates <- input$test_n_replicates
-        
-        dat <- session$userData$rv_life_stages$dat
-        
-        # Gather the environmental stressors (if any)
-        CE_df <- session$userData$rv_sandbox_stressors$dat
-        
-        dose <- NA
-        sr_wb_dat <- NA
-        HUC_ID <- NA
-        
-        if(!(is.data.frame(CE_df))) {
-          if(class(CE_df) == "list") {
-            if(length(CE_df) > 1) {
-              if(names(CE_df)[1] == "Mean") {
-                print("data preview error")
-                CE_df <- data.frame()
-                #browser()
-              }
-            }
-          }
-        }
-        
-        
-        if (length(CE_df) == 0) {
-          CE_df <- data.frame()
-        } else {
-          # ---------------------------------
-          # See if any enviro stressors present
-          CE_df <- CE_df[CE_df$check_on, ]
-        }
-        
-        
-        if (nrow(CE_df) >= 1) {
-          # Thin down stressors to target...
-          sr <- list()
-          sr$main_sheet <- session$userData$rv_stressor_response$main_sheet
-          sr$stressor_names <- session$userData$rv_stressor_response$stressor_names
-          sr$sr_dat <- session$userData$rv_stressor_response$sr_dat
-          # Thin down...
-          sr$main_sheet <- sr$main_sheet[which(sr$main_sheet$Stressors %in% CE_df$Stressors), ]
-          sr$stressor_names <- sr$stressor_names[sr$stressor_names %in% CE_df$Stressors]
-          sr$sr_dat <- sr$sr_dat[which(names(sr$sr_dat) %in%  CE_df$Stressors)]
-          
-          # Stressor Magnitude...
-          # Make up dummy data for a sample watershed
-          smw_sample <- data.frame(
-            HUC_ID = CE_df$HUC_ID,
-            NAME = CE_df$NAME,
-            Stressor = CE_df$Stressors,
-            Stressor_cat = CE_df$Stressor_cat,
-            Mean = CE_df$Mean,
-            SD = CE_df$SD,
-            Distribution = CE_df$Distribution,
-            Low_Limit = CE_df$Low_Limit,
-            Up_Limit = CE_df$Up_Limit
-          )
-          
-          # Set CE layers
-          dose <- smw_sample
-          sr_wb_dat <- sr
-          
-          HUC_ID <- unique(CE_df$HUC_ID)[1]
-          if (length(HUC_ID) == 0) {
-            HUC_ID <- unique(CE_df$HUC)[1]
-          }
-          
-          
-        }
-        
+
+      # Reconstruct full data frame: visible (user-edited) + hidden structural rows
+      input_df <- rbind(ltre_hidden_data(), ltre_table_data())
+
+      # Store n_samples
+      stored_n_samples(input$n_samples)
+
+      result <- tryCatch({
+        CEMPRA::pop_model_ltre_range(
+          life_cycle_params = input_df,
+          n_samples = stored_n_samples(),
+          seed = 42
+        )
+      }, error = function(e) {
+        shinybusy::remove_modal_spinner()
+        showNotification(paste("Error:", e$message), type = "error", duration = 10)
+        return(NULL)
       })
-      # end of isolate
-      # -------------------------------------------
-      
-      # semi-sanitize inputs
-      test_n_adjust <- ifelse(is.na(test_n_adjust), 0, test_n_adjust)
-      test_n_adjust <- ifelse(test_n_adjust < 0, 0, test_n_adjust)
-      
-      test_n_replicates <- ifelse(is.na(test_n_replicates), 1, test_n_replicates)
-      test_n_replicates <- ifelse(test_n_replicates < 1, 1, test_n_replicates)
-      
-      # Gather population model inputs
-      life_cycle_params <- isolate({
-        session$userData$rv_life_stages$dat
-      })
-      
-      # Run the sensitivity test
-      ltre <- CEMPRA::pop_model_ltre(
-        step_size = test_n_adjust,
-        # User input
-        dose = dose,
-        sr_wb_dat = sr_wb_dat,
-        life_cycle_params = life_cycle_params,
-        HUC_ID = HUC_ID,
-        n_reps = test_n_replicates,
-        # User input
-        stressors = NA,
-        # Should already be filtered
-        habitat_dd_k = NULL
-      )
-      
-      # Gather the outputs and store in user data
-      session$userData$rv_pop_model_ltre$ltre <- ltre
-      
-      # Open the modal
-      session$userData$rv_show_ltre_plot$open <- TRUE
-      
-      
+
+      shinybusy::remove_modal_spinner()
+
+      if (!is.null(result)) {
+        ltre_result(result)
+        session$userData$rv_pop_model_ltre$ltre <- result
+        session$userData$rv_show_ltre_plot$open <- TRUE
+      }
     })
-    
-    
-    #----------------------------------------------------------
-    # Create content (tables and figures) to show in the modal
-    #----------------------------------------------------------
-    
-    # Render the data table
-    output$ltre_summary_ce <- renderDT({
-      # Example dataset (iris)
-      ltre <- session$userData$rv_pop_model_ltre$ltre
-      
-      df <- ltre$ltre_summary_ce
-      df$Parameter <- df$this_param
-      df$Value <- df$value_default
-      df$Change <- paste0(df$direction, ": ", round(df$value_adj, 3))
-      df$Lambda <- round(df$lambda, 3)
-      df$PctChange <- round(df$lambda_change, 3)
-      df <- df[, c("Parameter", "Value", "Change", "Lambda", "PctChange")]
-      
-      datatable(
-        df,
-        selection = 'none',
-        rownames = FALSE,
-        colnames = c(
-          "Parameter",
-          "Initial Value",
-          "Changed Value",
-          "Resulting Lambda",
-          "% Change"
-        ),
-        options = list(pageLength = 10, scrollX = TRUE)
-      ) %>%
-        formatPercentage("PctChange", 2)
-      
-      
-    })
-    
-    
-    # Render the data table
-    output$ltre_summary_baseline <- renderDT({
-      # Example dataset (iris)
-      ltre <- session$userData$rv_pop_model_ltre$ltre
-      
-      df <- ltre$ltre_summary_baseline
-      df$Parameter <- df$this_param
-      df$Value <- df$value_default
-      df$Change <- paste0(df$direction, " to: ", round(df$value_adj, 3))
-      df$Lambda <- round(df$lambda, 3)
-      df$PctChange <- round(df$lambda_change, 3)
-      df <- df[, c("Parameter", "Value", "Change", "Lambda", "PctChange")]
-      
-      datatable(
-        df,
-        selection = 'none',
-        rownames = FALSE,
-        colnames = c(
-          "Parameter",
-          "Initial Value",
-          "Changed Value",
-          "Resulting Lambda",
-          "% Change"
-        ),
-        options = list(pageLength = 10, scrollX = TRUE)
-      ) %>%
-        formatPercentage("PctChange", 2)
-      
-      
-    })
-    
-    
-    
-    # Render the data table
-    output$ltre_text_baseline <- renderText({
-      ltre <- session$userData$rv_pop_model_ltre$ltre
-      mlambda <- round(ltre$mean_baseline_lambda, 3)
-      paste0(
-        "Under the baseline scenario (omitting all cumulative effects stressors and stressor-response relationships) the mean lambda value from stochastic simulations is " ,
-        mlambda,
-        "."
-      )
-    })
-    
-    output$ltre_text_ce <- renderText({
-      ltre <- session$userData$rv_pop_model_ltre$ltre
-      mlambda <- round(ltre$mean_ce_lambda, 3)
-      paste0(
-        "Under the cumulative effects scenario (with selected stressors and stressor-response relationships) the mean lambda value for the target location from stochastic simulations is  " ,
-        mlambda,
-        "."
-      )
-    })
-    
-    
-    
-    # Update plot parameter selection
-    observe({
-      ltre <- session$userData$rv_pop_model_ltre$ltre
-      df <- ltre$ltre_summary_baseline
-      parameters <- sort(unique(df$this_param))
-      
-      updateSelectInput(session,
-                        "plot_param",
-                        choices = parameters,
-                        selected = parameters[1])
-    })
-    
-    
-    plot_data <- reactive({
-      req(input$plot_param) # Ensure the input is available
-      dat <- session$userData$rv_pop_model_ltre$ltre$all_dat_stochastic
-      dat <- dat[dat$this_param == input$plot_param, ]
-      dat
-    })
-    
-    
-    output$histogram_plots <- renderPlotly({
-      print("Plotting adults...")
-      req(plot_data()) # Ensure plot_data() is ready
-      
-      dat <- plot_data()
-      
-      dat$ce <- ifelse(dat$ce == "ce", "CE: With Stressors", dat$ce)
-      dat$ce <- ifelse(dat$ce == "baseline", "Baseline: Without Stressors", dat$ce)
-      
-      ggplot(dat, aes(x = lambda, fill = interaction(ce, direction))) +
-        # Overlapping histograms
-        geom_density(
-          alpha    = 0.5,            # semi-transparent fill
-          position = "identity",     # allow overlaps
-        ) +
-        # Facet by 'this_param' vertically (one row per param)
-        facet_wrap(~ ce, ncol = 1, strip.position = "top") +
-        scale_fill_manual(
-          values = c(
-            "CE: With Stressors.increase"        = "lightblue",
-            "CE: With Stressors.decrease"        = "lightpink",
-            "Baseline: Without Stressors.increase"  = "lightblue",
-            "Baseline: Without Stressors.decrease"  = "lightpink"
-          ),
-          name = "Scenario"
-        ) +
-        labs(
-          x = "Lambda Value",
-          y = "Relative Frequency"
-        ) +
-        # General theme
-        theme_bw(base_size = 14) +
-        theme(legend.position="none")
-      
-      
-    })
-    
-    
-    
-    #-------------------------------------------------------
-    # Open the sensitivity test modal
-    #-------------------------------------------------------
+
+    # ----------------------------------------------------------
+    # Step 5: Show Results Modal
+    # ----------------------------------------------------------
     observeEvent(session$userData$rv_show_ltre_plot$open, {
-      # Determine the number of stages
-      n_stage <- session$userData$rv_life_stages$dat$Value[session$userData$rv_life_stages$dat$Name == "Nstage"]
-      
-      
-      # Show sensitivity test results
-      showModal(
-        modalDialog(
-          title = "Parameter Sensitivity Tests",
-          
-          tagList(
-            tags$p(
-              "The following sensitivity test is similar to a life table response experiment (LTRE) for matrix population models. In the following test, each parameter is increased and decreased by a fixed fraction (defined by the user input):"
-            ),
-            tags$p(
-              "increased parameter value = initial value + (initial value * fraction)"
-            ),
-            tags$p(
-              "decreased parameter value = initial value - (initial value * fraction)"
-            ),
-            tags$p(
-              "The projection matrices are then regenerated for each change in each parameter and compared to the initial default value (with the original unmodified values). The intrinsic productivity (lambda) is then calculated from each projection matrix to evaluate the sensitivity between lambda and input parameters. In other words, this sensitivity test is used to determine the relative influence of each parameter on the change in intrinsic productivity."
-            ),
-            
-            tags$p(
-              "The first table shows the results from the sensitivity test using baseline vital rates (omitting all stressors and stressor-response relationships). The second table shows us the result of the same sensitivity test after applying (selected) stressors and stressor response relationships to the vital rates as initial modifiers. Pay close attention to how the relative ranking of each parameter changes between these tables or ignore the second table if you are running the test without stressors."
-            ),
-            tags$p(
-              "Resulting lambda values and percent change values are reported as the geometric mean from batch replicates. Batch replicates allow us to incorporate stochasticity in the vital rates, stressor magnitude levels, and stressor-response values. If the ranking order does not make sense, stochasticity may be affecting the results. To resolve this issue either increase the number of batch replicates and/or decrease stochasticity in the vital rates, stressors, and stressor-response relationships and try re-running the sensitivity test."
-            ),
-            
-            tags$p(
-              "The sensitivity tests can be creatively leveraged for comparative demography. Users may switch between locations, scenarios, toggle stressors on/off, etc. to understand important context dependence. However, be aware that the sensitivity test only explores changes to intrinsic population productivity (lambda). The sensitivity test does not incorporate habitat availability and habitat capacity constraints (density dependence), which may be an important bottleneck to population recovery. Also, remember that a fixed increase of X% for one parameter (e.g., egg survivorship) may be possible to achieve in the real world, but the same fixed increase (of X%) may be impossible or meaningless to pursue for another vital rate (e.g., sex ratio). See existing literature on LTREs for avenues to pursue this further."
-            ),
-            
-            
-            tags$br(),
-            
-            tags$h4(
-              "Baseline Sensitivity Test Results: Exluding all Stressors and Stressor-Response Relationships"
-            ),
-            
-            textOutput(ns("ltre_text_baseline")),
-            
-            DTOutput(ns("ltre_summary_baseline")),
-            
-            tags$br(),
-            
-            tags$h4(
-              "CE Sensitivity Test Results: Including Stressors and Stressor-Response Relationships"
-            ),
-            
-            textOutput(ns("ltre_text_ce")),
-            
-            DTOutput(ns("ltre_summary_ce")),
-            
-            #
-            tags$br(),
-            
-            tags$p(
-              "Explore stochastic distributions of lambda estimates. Use the select box to switch between parameters. Pink shows the distribution of lambda values where the parameter was decreased by a fraction. Blue shows the distribution of lambda values where the parameter was increased by a fraction."
-            ),
-            
-            selectInput(ns("plot_param"), "Choose a parameter to plot:", choices = NULL),
-            
-            plotlyOutput(ns("histogram_plots"))
-            
-          ),
-          easyClose = TRUE,
-          size = "l",
-          footer = NULL
-        ),
-        
-      )
+      req(session$userData$rv_show_ltre_plot$open)
+      showModal(build_modal())
     }, ignoreInit = TRUE)
-  
-  
-  
-  
+
+    # ----------------------------------------------------------
+    # Step 6: Render Results
+    # ----------------------------------------------------------
+
+    # Lambda summary text
+    output$ltre_lambda_summary <- renderText({
+      res <- ltre_result()
+      req(res)
+      s <- res$lambda_summary
+      paste0(
+        "Median lambda: ", round(s$median, 4),
+        " | Pr(lambda > 1): ", round(s$prob_lambda_gt_1 * 100, 1), "%",
+        " | Pr(lambda < 1): ", round(s$prob_lambda_lt_1 * 100, 1), "%",
+        " | Valid samples: ", s$n_valid, " of ", s$n_valid + s$n_failed
+      )
+    })
+
+    # Lambda histogram
+    output$ltre_lambda_hist <- renderPlot({
+      res <- ltre_result()
+      req(res)
+
+      lambda_vals <- res$samples$lambda[!is.na(res$samples$lambda)]
+      med_val <- res$lambda_summary$median
+      pct_below <- round(res$lambda_summary$prob_lambda_lt_1 * 100, 1)
+
+      hist(lambda_vals, breaks = 40, col = "steelblue", border = "white",
+           main = "Distribution of Lambda from Monte Carlo Samples",
+           xlab = "Lambda (population growth rate)",
+           sub = paste0(pct_below, "% of samples with lambda < 1"))
+
+      abline(v = 1, col = "black", lty = 1, lwd = 2)
+      abline(v = med_val, col = "red", lty = 2, lwd = 2)
+
+      legend("topright",
+             legend = c("Lambda = 1", paste0("Median = ", round(med_val, 4))),
+             col = c("black", "red"), lty = c(1, 2), lwd = 2, bg = "white")
+    })
+
+    # PRCC bar chart
+    output$ltre_prcc_barplot <- renderPlot({
+      res <- ltre_result()
+      req(res)
+
+      prcc_data <- res$prcc_rankings
+      prcc_data$parameter <- factor(prcc_data$parameter,
+                                     levels = rev(prcc_data$parameter))
+      prcc_data$significant <- prcc_data$p_value < 0.01
+
+      ggplot2::ggplot(prcc_data,
+                      ggplot2::aes(x = .data$abs_prcc,
+                                   y = .data$parameter,
+                                   fill = .data$significant)) +
+        ggplot2::geom_col(width = 0.7) +
+        ggplot2::scale_fill_manual(
+          values = c("TRUE" = "steelblue", "FALSE" = "coral"),
+          labels = c("TRUE" = "(p < 0.01)", "FALSE" = "(p > 0.01)"),
+          name = "Statistical Significance"
+        ) +
+        ggplot2::scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25)) +
+        ggplot2::labs(
+          x = "Absolute PRCC with Lambda",
+          y = "Model Parameter",
+          title = "Parameter Sensitivity Rankings",
+          subtitle = paste0("Based on ", res$metadata$n_samples, " Monte Carlo samples")
+        ) +
+        ggplot2::theme_minimal(base_size = 12) +
+        ggplot2::theme(
+          panel.grid.major.y = ggplot2::element_blank(),
+          panel.grid.minor = ggplot2::element_blank(),
+          legend.position = "bottom"
+        )
+    })
+
+    # PRCC table
+    output$ltre_prcc_table <- DT::renderDT({
+      res <- ltre_result()
+      req(res)
+
+      top10 <- utils::head(res$prcc_rankings, 10)
+      top10$prcc <- round(top10$prcc, 3)
+      top10$abs_prcc <- round(top10$abs_prcc, 3)
+      top10$p_value <- round(top10$p_value, 4)
+
+      DT::datatable(
+        top10,
+        selection = "none",
+        rownames = FALSE,
+        colnames = c("Parameter", "PRCC", "p-value", "Abs. PRCC"),
+        options = list(pageLength = 10, dom = "t", ordering = FALSE)
+      )
+    })
+
   })
 }

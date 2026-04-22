@@ -48,7 +48,11 @@ module_matrix_model_inputs_ui <- function(id) {
               width = 12,
               checkboxInput(
                 ns("anadromous"),
-                label = "Does your species follow an anadromous life history (Yes/checked = semelparous for salmon; No/unchecked = iteroparous for trout etc.)",
+                label = paste0(
+                  "Semelparous / age-structured model (checked = salmon-style semelparous life history ",
+                  "where individuals die after spawning; unchecked = iteroparous life history where ",
+                  "individuals can spawn in multiple years, e.g., trout, char, steelhead)"
+                ),
                 value = life_stages$Value[life_stages$Name == "anadromous"]
               )
             )
@@ -822,9 +826,9 @@ module_matrix_model_inputs_ui <- function(id) {
           collapsed = FALSE,
 
           tags$p(
-            "It is rare for natural populations to grow in perpetuity without any constraints on growth, survival, and reproduction.
-            The life cycle model includes mechanisms to constrain population growth or limit high densities through ",
-            tags$strong("density-dependent bottlenecks"), ".",
+            "Natural populations rarely grow without limit. The life cycle model uses ",
+            tags$strong("density-dependent bottlenecks"),
+            " to constrain growth at specific life stages, reflecting real-world limits on habitat, food, or spawning sites.",
             class = "pm-ht"
           ),
 
@@ -836,37 +840,97 @@ module_matrix_model_inputs_ui <- function(id) {
           tags$ol(
             tags$li(
               tags$strong("Location and Stage-Specific Carrying Capacities (Recommended):"),
-              " Use this approach when you have habitat data and can estimate maximum densities for specific life stages
-              (e.g., 'Location X can produce up to 1,200 parr'). This provides an intuitive workflow with Beverton-Holt
-              or Hockey-Stick functions."
+              " Use this approach when you can estimate how many individuals a location can support for a given life stage ",
+              "(e.g., 'Reach A can support up to 1,200 parr'). You choose which stages have bottlenecks and provide K values ",
+              "for each location. The model applies Beverton-Holt or Hockey-Stick constraints at those stages."
             ),
             tags$li(
-              tags$strong("Compensation Ratios:"),
-              " An alternative approach that allows evaluation without specifying location-specific habitat availability.
-              Uses adult carrying capacity and back-calculates stage-specific K values via stable-stage distribution.
-              Recommended only for users familiar with compensation ratios in population ecology."
+              tags$strong("Compensation Ratios (Legacy / Advanced):"),
+              " An alternative that only requires an overall adult carrying capacity (K). Stage-specific K values are ",
+              "back-calculated from the stable-stage distribution. Most users should use option 1 instead."
             )
           ),
 
           tags$details(
             tags$summary(
               style = "cursor: pointer; color: #337ab7; font-weight: bold; margin-top: 10px;",
-              "Learn more about density-dependent growth..."
+              "Learn more about Beverton-Holt vs. Hockey-Stick..."
             ),
             tags$div(
               style = "padding: 10px; background-color: #f9f9f9; border-radius: 4px; margin-top: 10px;",
+
               tags$p(
-                "Both mechanisms utilize the ", tags$strong("Beverton-Holt function"), " or a strict ",
-                tags$strong("Hockey-Stick"), " threshold to constrain transitions at key demographic bottlenecks."
+                tags$strong("These two function types are not interchangeable"),
+                " \u2014 they constrain different things:"
               ),
-              tags$p(
-                tags$strong("Beverton-Holt Function:"), " Calculates expected individuals in the next time step as a
-                function of current abundance, carrying capacity (K), and baseline survival (S). As population approaches K,
-                recruitment flattens asymptotically."
+
+              tags$div(
+                style = "background-color: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 12px; margin-bottom: 12px;",
+                tags$p(
+                  style = "margin-bottom: 6px;",
+                  tags$strong("Beverton-Holt (BH)"), " \u2014 a ",
+                  tags$em("flow constraint"), " on the transition INTO a stage."
+                ),
+                tags$p(
+                  style = "margin-bottom: 6px; font-size: 13px;",
+                  "The BH equation uses the survival rate and abundance from the ",
+                  tags$em("previous"), " (source) stage to compute how many individuals can enter the destination stage. ",
+                  "At low abundance, recruitment tracks density-independent survival. At high abundance, recruitment ",
+                  "saturates toward K asymptotically \u2014 the output is always ", tags$em("less"), " than K."
+                ),
+                tags$p(
+                  style = "margin-bottom: 0; font-size: 12px; color: #555;",
+                  tags$em("Example: "), tags$code("bh_stage_1"),
+                  " with K = 5,000 constrains the fry \u2192 stage-1 transition. ",
+                  "The model uses fry survival (S0) and fry count to compute how many can become stage-1 individuals. ",
+                  "Reported stage-1 abundance will approach but never exceed 5,000."
+                )
               ),
-              tags$p(
-                tags$strong("Hockey-Stick:"), " A simpler hard-cap approach where abundance cannot exceed K, regardless of productivity."
+
+              tags$div(
+                style = "background-color: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 12px; margin-bottom: 12px;",
+                tags$p(
+                  style = "margin-bottom: 6px;",
+                  tags$strong("Hockey-Stick (HS)"), " \u2014 a ",
+                  tags$em("state constraint"), " (hard cap) on the population OF a stage."
+                ),
+                tags$p(
+                  style = "margin-bottom: 6px; font-size: 13px;",
+                  "After the matrix projection step, if the number of individuals in a stage exceeds K, ",
+                  "it is simply truncated to K. No transition math is involved."
+                ),
+                tags$p(
+                  style = "margin-bottom: 0; font-size: 12px; color: #555;",
+                  tags$em("Example: "), tags$code("hs_stage_1"),
+                  " with K = 5,000 caps the total stage-1 population at 5,000 after each time step, ",
+                  "regardless of how many individuals survived from the previous stage."
+                )
               ),
+
+              tags$div(
+                style = "background-color: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 12px; margin-bottom: 12px;",
+                tags$p(
+                  style = "margin-bottom: 6px;",
+                  tags$strong("Spawner caps"), " (",
+                  tags$code("bh_spawners"), " / ", tags$code("hs_spawners"), ")"
+                ),
+                tags$p(
+                  style = "margin-bottom: 0; font-size: 13px;",
+                  "Constrain the ", tags$strong("total"), " population across all mature (spawning) stages. ",
+                  "For ", tags$code("hs_spawners"), ", excess is reduced proportionally across spawning age classes. ",
+                  "For ", tags$code("bh_spawners"), ", K is distributed proportionally and individual BH constraints are applied per-stage."
+                )
+              ),
+
+              tags$div(
+                style = "background-color: #fcf8e3; border-left: 4px solid #f0ad4e; padding: 10px; border-radius: 4px; margin-bottom: 12px;",
+                tags$strong("What the model reports: "),
+                "Population values in all outputs are ", tags$strong("post-DD"), " abundances. Each time step: ",
+                "(1) matrix projection applies density-independent rates, ",
+                "(2) DD constraints are applied, ",
+                "(3) the constrained values are stored. You are always seeing numbers ", tags$em("after"), " the bottleneck."
+              ),
+
               tags$p(
                 "For more details, see ",
                 tags$a(href = "https://mattjbayly.github.io/CEMPRA_documentation/07_life_cycle_model.html#density-dependent-constraints-on-growth",
@@ -891,54 +955,209 @@ module_matrix_model_inputs_ui <- function(id) {
             class = "pm-ht"
           ),
 
+          # Key concept callout - always visible
+          tags$div(
+            style = "background-color: #e9ecef; border: 1px solid #ced4da; border-left: 4px solid #6c757d; padding: 12px; border-radius: 4px; margin-bottom: 15px;",
+            tags$div(
+              style = "display: flex; align-items: flex-start;",
+              shiny::icon("info-circle", style = "margin-right: 10px; margin-top: 3px; color: #495057;"),
+              tags$div(
+                style = "color: #343a40;",
+                tags$strong("K always refers to the DESTINATION (TO) stage", style = "display: block; margin-bottom: 5px;"),
+                tags$span(
+                  style = "font-size: 13px;",
+                  "K values and DD flags specify the stage that individuals are ", tags$em("entering or occupying"),
+                  ". The constraint limits how many individuals can be in that stage. For example, ",
+                  tags$code("k_stage_1_mean = 5,000"), " means stage 1 can hold at most 5,000 individuals ",
+                  "\u2014 it constrains the fry \u2192 stage-1 transition (BH) or caps stage-1 abundance (HS)."
+                )
+              )
+            )
+          ),
+
           tags$details(
             tags$summary(
               style = "cursor: pointer; color: #337ab7; font-weight: bold;",
-              "Learn more about setting up location-specific capacities..."
+              "How to set up location-specific capacities (step-by-step)..."
             ),
             tags$div(
-              style = "padding: 10px; background-color: #f9f9f9; border-radius: 4px; margin-top: 10px;",
+              style = "padding: 12px; background-color: #f9f9f9; border-radius: 4px; margin-top: 10px;",
 
-              tags$h5("Step 1: Define Density-Dependent Bottlenecks"),
-              tags$p("Use the controls below to specify which life stages have density-dependent constraints and which function to use:"),
+              # ---- STEP 1 ----
+              tags$h5("Step 1: Choose which life stages have density-dependent bottlenecks"),
+              tags$p(
+                style = "font-size: 13px;",
+                "Use the controls below to add one or more bottlenecks. For each bottleneck, ",
+                "you pick a ", tags$strong("function type"), " (Beverton-Holt or Hockey-Stick) and a ",
+                tags$strong("target life stage"), ". You do not need DD on every stage \u2014 most systems have ",
+                "one or two key bottlenecks (e.g., a parr capacity limit, or a spawner cap)."
+              ),
 
+              # Transition reference table
+              tags$p(tags$strong("Which stage is constrained by each flag?")),
               tags$table(
                 class = "table table-sm table-bordered",
-                style = "font-size: 12px; margin-bottom: 15px;",
+                style = "font-size: 12px; margin-bottom: 10px;",
                 tags$thead(
                   tags$tr(
-                    tags$th("Name Tag", style = "width: 25%;"),
-                    tags$th("Mechanism", style = "width: 20%;"),
-                    tags$th("Description")
+                    tags$th("DD Flag", style = "width: 22%;"),
+                    tags$th("Type", style = "width: 13%;"),
+                    tags$th("FROM stage", style = "width: 15%;"),
+                    tags$th("TO (destination) stage", style = "width: 20%;"),
+                    tags$th("What the model uses")
                   )
                 ),
                 tags$tbody(
-                  tags$tr(tags$td("bh_stage_0"), tags$td("Beverton-Holt"), tags$td("Egg-to-fry transition limiting max fry")),
-                  tags$tr(tags$td("hs_stage_0"), tags$td("Hockey-Stick"), tags$td("Hard cap on fry abundance")),
-                  tags$tr(tags$td("bh_stage_1, bh_stage_2, ..."), tags$td("Beverton-Holt"), tags$td("Stage transitions with BH constraint")),
-                  tags$tr(tags$td("hs_stage_1, hs_stage_2, ..."), tags$td("Hockey-Stick"), tags$td("Hard cap at each stage")),
-                  tags$tr(tags$td("bh_spawners"), tags$td("Beverton-Holt"), tags$td("Total spawner capacity constraint")),
-                  tags$tr(tags$td("hs_spawners"), tags$td("Hockey-Stick"), tags$td("Hard cap on total spawners"))
+                  tags$tr(
+                    tags$td(tags$code("bh_stage_0")),
+                    tags$td("BH"),
+                    tags$td("Eggs"),
+                    tags$td(tags$strong("Fry (age-0)")),
+                    tags$td("alpha = SE (egg survival), Nt = egg count")
+                  ),
+                  tags$tr(
+                    tags$td(tags$code("hs_stage_0")),
+                    tags$td("HS"),
+                    tags$td("\u2014"),
+                    tags$td(tags$strong("Fry (age-0)")),
+                    tags$td("Hard cap: fry count truncated to K")
+                  ),
+                  tags$tr(
+                    tags$td(tags$code("bh_stage_1")),
+                    tags$td("BH"),
+                    tags$td("Fry (age-0)"),
+                    tags$td(tags$strong("Stage 1")),
+                    tags$td("alpha = S0 (fry survival), Nt = fry count")
+                  ),
+                  tags$tr(
+                    tags$td(tags$code("hs_stage_1")),
+                    tags$td("HS"),
+                    tags$td("\u2014"),
+                    tags$td(tags$strong("Stage 1")),
+                    tags$td("Hard cap: stage-1 count truncated to K")
+                  ),
+                  tags$tr(
+                    tags$td(tags$code("bh_stage_2")),
+                    tags$td("BH"),
+                    tags$td("Stage 1"),
+                    tags$td(tags$strong("Stage 2")),
+                    tags$td("alpha = surv_1, Nt = stage-1 count")
+                  ),
+                  tags$tr(
+                    tags$td(tags$code("bh_stage_X")),
+                    tags$td("BH"),
+                    tags$td("Stage X\u22121"),
+                    tags$td(tags$strong("Stage X")),
+                    tags$td("alpha = surv_(X\u22121), Nt = stage-(X\u22121) count")
+                  ),
+                  tags$tr(
+                    tags$td(tags$code("bh_spawners")),
+                    tags$td("BH"),
+                    tags$td("(all mature)"),
+                    tags$td(tags$strong("Total spawners")),
+                    tags$td("K split proportionally across spawning ages")
+                  ),
+                  tags$tr(
+                    tags$td(tags$code("hs_spawners")),
+                    tags$td("HS"),
+                    tags$td("\u2014"),
+                    tags$td(tags$strong("Total spawners")),
+                    tags$td("Hard cap; excess reduced proportionally across ages")
+                  )
                 )
               ),
 
               tags$p(
-                tags$em("For anadromous species:"),
-                " Use 'pb' (pre-breeder) or 'b' (breeder) suffixes, e.g., bh_stage_pb_1, bh_stage_b_3, etc."
+                style = "font-size: 12px; color: #555; margin-bottom: 15px;",
+                tags$em("For semelparous/anadromous species: "),
+                "use ", tags$code("pb"), " (pre-breeder) or ", tags$code("b"), " (breeder) suffixes, ",
+                "e.g., ", tags$code("bh_stage_pb_1"), ", ", tags$code("bh_stage_b_3"), "."
               ),
 
-              tags$h5("Step 2: Define Location-Specific K Values", style = "margin-top: 15px;"),
-              tags$p("The habitat capacities table below specifies maximum individuals per stage per location. Required columns:"),
+              # ---- STEP 2 ----
+              tags$h5("Step 2: Provide location-specific K values in the habitat capacities table", style = "margin-top: 15px;"),
+              tags$p(
+                style = "font-size: 13px;",
+                "The habitat capacities table (below) sets the maximum number of individuals per stage per location. ",
+                "Each row is a location (e.g., a stream reach); each K column corresponds to one of the DD flags you defined above. ",
+                "Only stages with a DD flag need a K column \u2014 stages without a flag have no density-dependent constraint."
+              ),
+
+              tags$p(
+                style = "font-size: 13px;",
+                tags$strong("Column naming: "),
+                "column names in the capacities table map to destination stages. For example:"
+              ),
               tags$ul(
-                tags$li(tags$code("HUC_ID"), " / ", tags$code("NAME"), ": Location identifiers"),
-                tags$li(tags$code("k_stage_0_mean"), ": Fry carrying capacity"),
-                tags$li(tags$code("k_stage_1_mean"), ", ", tags$code("k_stage_2_mean"), ", ...: Stage-specific capacities"),
-                tags$li(tags$code("k_spawners_mean"), ": Total spawner capacity (anadromous)")
+                style = "font-size: 13px;",
+                tags$li(tags$code("k_stage_0_mean"), " = capacity of ", tags$strong("fry (age-0)"), " \u2014 constrains the egg \u2192 fry transition"),
+                tags$li(tags$code("k_stage_1_mean"), " = capacity of ", tags$strong("stage 1"), " (e.g., parr) \u2014 constrains fry \u2192 stage-1"),
+                tags$li(tags$code("k_stage_2_mean"), " = capacity of ", tags$strong("stage 2"), " \u2014 constrains stage-1 \u2192 stage-2"),
+                tags$li(tags$code("k_spawners_mean"), " = total ", tags$strong("spawner"), " capacity \u2014 constrains total abundance across all mature stages")
+              ),
+
+              # ---- WORKED EXAMPLE ----
+              tags$h5("Worked example: 4-stage trout with parr bottleneck", style = "margin-top: 15px;"),
+              tags$div(
+                style = "background-color: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 12px; margin-bottom: 12px;",
+                tags$p(
+                  style = "font-size: 13px; margin-bottom: 8px;",
+                  "Suppose you have a 4-stage non-anadromous trout model and the main bottleneck is parr habitat (stage 1). ",
+                  "Your field data indicate that Rock Creek can support about 1,200 parr and Pine Creek about 800."
+                ),
+                tags$p(style = "font-size: 13px; margin-bottom: 4px;", tags$strong("Step 1: "), "Add one bottleneck row:"),
+                tags$ul(
+                  style = "font-size: 13px; margin-bottom: 8px;",
+                  tags$li("Function: ", tags$code("Beverton-Holt")),
+                  tags$li("Target stage: ", tags$code("Stage 1 (stage_1)"))
+                ),
+                tags$p(style = "font-size: 13px; margin-bottom: 4px;", tags$strong("Step 2: "), "In the habitat capacities table:"),
+                tags$table(
+                  class = "table table-sm table-bordered",
+                  style = "font-size: 12px; margin-bottom: 8px;",
+                  tags$thead(tags$tr(
+                    tags$th("HUC_ID"), tags$th("NAME"), tags$th("k_stage_1_mean")
+                  )),
+                  tags$tbody(
+                    tags$tr(tags$td("RC01"), tags$td("Rock Creek"), tags$td("1200")),
+                    tags$tr(tags$td("PC01"), tags$td("Pine Creek"), tags$td("800"))
+                  )
+                ),
+                tags$p(
+                  style = "font-size: 12px; color: #555; margin-bottom: 0;",
+                  "Result: the model applies a Beverton-Holt curve at the fry \u2192 stage-1 transition, using S0 (fry survival) as alpha ",
+                  "and the location-specific K. At Rock Creek, stage-1 abundance approaches but never exceeds 1,200. ",
+                  "All other stage transitions remain density-independent."
+                )
+              ),
+
+              # ---- TIPS ----
+              tags$div(
+                style = "background-color: #fcf8e3; border-left: 4px solid #f0ad4e; padding: 10px; border-radius: 4px; margin-bottom: 12px;",
+                tags$strong("Tips for estimating K values:"),
+                tags$ul(
+                  style = "font-size: 13px; margin-bottom: 0; margin-top: 6px;",
+                  tags$li(
+                    "K values are typically derived from habitat data and species-specific density estimates ",
+                    "(e.g., 1,500 parr/km \u00d7 0.8 km of accessible stream = 1,200 parr)."
+                  ),
+                  tags$li(
+                    "The CEMPRA tool does not estimate K for you \u2014 use regional literature or field surveys."
+                  ),
+                  tags$li(
+                    "For salmonids in streams, see Cramer & Ackerman (2009) and Beechie et al. (2021) for capacity estimation methods."
+                  ),
+                  tags$li(
+                    "For lake-dependent species (e.g., Sockeye), define locations at the lake/basin scale and estimate ",
+                    "capacity from lake productivity rather than stream reach metrics."
+                  )
+                )
               ),
 
               tags$p(
                 tags$a(href = "https://mattjbayly.github.io/CEMPRA_documentation/07_life_cycle_model.html#location-and-stage-specific-carrying-capacities",
-                       target = "_blank", "See full documentation with examples...")
+                       target = "_blank", icon("external-link-alt"),
+                       " Full documentation with additional examples and transition reference tables")
               )
             )
           ),
@@ -961,10 +1180,28 @@ module_matrix_model_inputs_ui <- function(id) {
 
           tags$h3("(Optional) Define Density Dependence with Compensation Ratios"),
 
-          tags$p(
-            tags$em("Note: This approach is only recommended for advanced users familiar with compensation ratios in population ecology.
-            For most applications, use the Location-Specific Carrying Capacities approach above."),
-            style = "color: #856404; background-color: #fff3cd; padding: 10px; border-radius: 4px; margin-bottom: 15px;"
+          tags$div(
+            style = "color: #856404; background-color: #fff3cd; border: 1px solid #ffc107; border-left: 4px solid #ffc107; padding: 12px; border-radius: 4px; margin-bottom: 15px;",
+            tags$div(
+              style = "display: flex; align-items: flex-start;",
+              shiny::icon("exclamation-triangle", style = "margin-right: 10px; margin-top: 3px;"),
+              tags$div(
+                tags$strong("Most users should skip this section.", style = "display: block; margin-bottom: 5px;"),
+                tags$span(
+                  "Compensation ratios are a legacy mechanism retained for backward compatibility and specialized ",
+                  "research applications. The location and stage-specific carrying capacities described above (with ",
+                  "Beverton-Holt or Hockey-Stick functions) provide a simpler, more transparent, and more flexible ",
+                  "way to implement density dependence. If you are unsure which approach to use, ",
+                  tags$strong("use stage-specific carrying capacities and set all compensation ratios to 1.0."),
+                  style = "font-size: 13px;"
+                ),
+                tags$p(
+                  "Combining compensation ratios with location-specific carrying capacities is strongly discouraged ",
+                  "as it makes model behaviour difficult to interpret and diagnose.",
+                  style = "font-size: 12px; margin-top: 8px; margin-bottom: 0; font-style: italic;"
+                )
+              )
+            )
           ),
 
           tags$details(
@@ -1189,22 +1426,33 @@ module_matrix_model_inputs_server <- function(id) {
       if (is.na(value)) {
         return("Cannot be blank")
       }
-      if (class(value) != "numeric" &
-          class(value) != "integer") {
+      if (!is.numeric(value) & !is.integer(value)) {
         return("Must be a number")
       }
       if (value <= 0) {
-        return("Value must be between greater than 0")
+        return("Value must be greater than 0")
       }
     }
-    
-    
-    
+
+    # Eggs per spawner: must be a non-negative number
+    eps_rule <- function(value) {
+      if (is.null(value) || is.na(value)) {
+        return(NULL)  # eps fields can be left empty for unused stages
+      }
+      if (!is.numeric(value) & !is.integer(value)) {
+        return("Must be a number")
+      }
+      if (value < 0) {
+        return("Eggs per spawner cannot be negative")
+      }
+    }
+
+
+
     iv <- InputValidator$new()
     iv$add_rule("Nstage", btwn_1_and_10)
     iv$add_rule("k", simp_num)
     iv$add_rule("events", simp_num)
-    # iv$add_rule("eps", simp_num)
     iv$add_rule("int", simp_num)
     iv$add_rule("SE", btwn_01)
     iv$add_rule("S0", btwn_01)
@@ -1217,6 +1465,11 @@ module_matrix_model_inputs_server <- function(id) {
     #iv$add_rule("year_2", gtr_0)
     #iv$add_rule("year_3", gtr_0)
     #iv$add_rule("year_4", gtr_0)
+    # Validate eps (eggs per spawner) for all stages
+    for (i in 1:10) {
+      iv$add_rule(paste0("eps_", i), eps_rule)
+    }
+    iv$add_rule("eps_sd", simp_num)
     iv$add_rule("cr_E", simp_num)
     iv$add_rule("cr_0", simp_num)
     iv$add_rule("cr_1", simp_num)
@@ -1778,8 +2031,10 @@ module_matrix_model_inputs_server <- function(id) {
         start_time <- Sys.time()
 
         # Reset active layer in stressor response
+        # Use isolate() to avoid creating a reactive dependency on stressor_names
+        # (matches the pattern in the main sidebar upload handler)
         session$userData$rv_stressor_response$active_layer <-
-          session$userData$rv_stressor_response$stressor_names[1]
+          isolate(session$userData$rv_stressor_response$stressor_names[1])
         session$userData$rv_stressor_response$active_values_raw <- NULL
         session$userData$rv_stressor_response$active_values_response <- NULL
         session$userData$rv_stressor_response$active_refresh <- start_time

@@ -14,10 +14,8 @@ The Cumulative Effects Model for Prioritizing Recovery Actions (CEMPRA) is a cum
 -   GitHub Repository for R-Package (<https://github.com/essatech/CEMPRA>)
 -   GitHub Repository for R-Shiny Application (<https://github.com/essatech/CEMPRAShiny>)
 -   LIVE (online R-Shiny Application) (<https://essa.shinyapps.io/CEMPRAShiny/>)
--   R-Package Tutorials (<https://essatech.github.io/CEMPRA/index.html>)
 -   Guidance Document (Real-time Updates): (<https://mattjbayly.github.io/CEMPRA_documentation/>)
--   Guidance Document (2024 pdf): (<https://www.essa.com/wp-content/uploads/2024/05/Guideline_Documentation_Report-2024.03.14.pdf>)
-
+-   R-Package Tutorials (<https://essatech.github.io/CEMPRA/index.html>)
 
 ## Package Contributors:
 This is a broad collaboration between Fisheries and Oceans Canada (DFO), B.C. Ministry of Environment and Climate Change Strategy (ECCS), Alberta Environment and Parks (AEP), and Simon Fraser University (SFU). 

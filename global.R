@@ -45,9 +45,14 @@ library(rhandsontable)
 
 
 # Choose default files to load for Joe Model:
-file_name_stressor_response <- "./data/nd/Stressor Response - Nooksack Dace.xlsx"
-file_name_stressor_magnitude <- "./data/nd/Stressor Magnitude _ Nooksack Dace.xlsx"
-fname_locations <- "./data/nd/Locations_Nooksack_Dace.gpkg"
+# file_name_stressor_response <- "./data/ss/Stressor Response - Salish Sucker.xlsx"
+# file_name_stressor_magnitude <- "./data/ss/Stressor Magnitude - Salish Sucker.xlsx"
+# fname_locations <- "./data/ss/Locations_Salish_Sucker.gpkg"
+
+file_name_stressor_response <- "./data/nanaimo/Stressor_Response.xlsx"
+file_name_stressor_magnitude <- "./data/nanaimo/Stressor_Magnitude.xlsx"
+fname_locations <- "./data/nanaimo/reaches_populations.gpkg"
+
 
 # Choose default files to load for LCM:
 life_stages <- read.csv("./data/nicola_pop/chinook_life_cycle_profile.csv")

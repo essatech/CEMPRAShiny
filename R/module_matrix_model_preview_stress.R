@@ -111,31 +111,31 @@ module_matrix_model_preview_stress_server <-
                    
                    # Listen to change in values
                    observe({
-                     
+
                      req(input$pm_ps_val_mean)
                      req(input$pm_ps_val_sd)
                      req(input$pm_ps_val_lwr)
                      req(input$pm_ps_val_upr)
-                     
-                     
-                     #print("Update stressor value in matrix...")
-                     #print(as.data.frame(session$userData$rv_sandbox_stressors$dat$Mean))
-                     
-                       
-                       # Update values in reference object
-                       this_stressor <- stressor_variable$Stressors
-                       
-                       session$userData$rv_sandbox_stressors$dat$Mean[which(session$userData$rv_sandbox_stressors$dat$Stressors == this_stressor)] <- input$pm_ps_val_mean
-                       session$userData$rv_sandbox_stressors$dat$SD[which(session$userData$rv_sandbox_stressors$dat$Stressors == this_stressor)] <- input$pm_ps_val_sd
-                       session$userData$rv_sandbox_stressors$dat$Low_Limit[which(session$userData$rv_sandbox_stressors$dat$Stressors == this_stressor)] <- input$pm_ps_val_lwr
-                       session$userData$rv_sandbox_stressors$dat$Up_Limit[which(session$userData$rv_sandbox_stressors$dat$Stressors == this_stressor)] <- input$pm_ps_val_upr
-                       
-                       # Checkbox status
-                       session$userData$rv_sandbox_stressors$dat$check_on[which(session$userData$rv_sandbox_stressors$dat$Stressors == this_stressor)] <- input$pm_ps_check
-                       
-                       #print(as.data.frame(session$userData$rv_sandbox_stressors$dat))
-                       
-                     
+
+                     # Guard: skip if sandbox data has been flushed (empty list)
+                     # or if this stressor no longer exists in the current data
+                     # (can happen when old module observers outlive their UI)
+                     sandbox <- session$userData$rv_sandbox_stressors$dat
+                     if (!is.data.frame(sandbox)) return()
+
+                     this_stressor <- stressor_variable$Stressors
+                     idx <- which(sandbox$Stressors == this_stressor)
+                     if (length(idx) == 0) return()
+
+                     # Update values in reference object
+                     session$userData$rv_sandbox_stressors$dat$Mean[idx] <- input$pm_ps_val_mean
+                     session$userData$rv_sandbox_stressors$dat$SD[idx] <- input$pm_ps_val_sd
+                     session$userData$rv_sandbox_stressors$dat$Low_Limit[idx] <- input$pm_ps_val_lwr
+                     session$userData$rv_sandbox_stressors$dat$Up_Limit[idx] <- input$pm_ps_val_upr
+
+                     # Checkbox status
+                     session$userData$rv_sandbox_stressors$dat$check_on[idx] <- input$pm_ps_check
+
                    })
                    
                  })

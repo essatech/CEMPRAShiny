@@ -138,9 +138,16 @@ module_matrix_model_preview_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     print("matrix model preview server...")
-    
-    
-    
+
+    # Track which stressor module servers have been initialized.
+    # moduleServer() observers persist for the session lifetime, so
+    # calling moduleServer() twice with the same ID creates duplicate
+    # observers that fight over shared reactive data. We use a
+    # generation counter to give each render cycle unique IDs, and
+    # track the active generation so old observers can no-op.
+    rv_stress_gen <- reactiveVal(0L)
+    rv_initialized_servers <- reactiveVal(character(0))
+
     # ---------------------------------------------------------
     # (optional) Define the stressor variables values in the
     # sandbox population projection simulation
@@ -153,13 +160,13 @@ module_matrix_model_preview_server <- function(id) {
       # Re-trigger when session$userData$rv_stressor_magnitude$sm_dat is updated
       retrigger <- session$userData$rv_stressor_magnitude$sm_dat
 
-
       # Only consider stressors applicable to Population model
       ms_stress <- ms_stress[which(ms_stress$Model %in% c("Population Model", "All")), ]
 
       # If there are no population-only specific stressors then return
       # an empty UI
       if (nrow(ms_stress) == 0) {
+        session$userData$rv_sandbox_stressors$dat <- list()
         return(tags$p("No stressors defined for Population Model.", class = "text-muted"))
       }
 
@@ -175,21 +182,35 @@ module_matrix_model_preview_server <- function(id) {
       ms_stress$Low_Limit <- NA
       ms_stress$Up_Limit <- NA
 
+      # Bump the generation counter so stale observers from a
+      # previous render cycle will no-op (they check the generation
+      # via the module ID prefix).
+      new_gen <- isolate(rv_stress_gen()) + 1L
+      rv_stress_gen(new_gen)
+      gen_prefix <- paste0("g", new_gen, "_")
+
       session$userData$rv_sandbox_stressors$dat <- ms_stress
 
       print("Stressor sandbox list in pop model is being reset...")
 
-      # Call sub modules
+      # Reset the set of initialized servers for this generation
+      rv_initialized_servers(character(0))
+
+      # Call sub modules with generation-prefixed IDs to avoid
+      # duplicate observer collisions from previous render cycles.
       for (s in 1:nrow(ms_stress)) {
         this_stressor <- ms_stress[s, ]
         this_stressor_name <- this_stressor$Stressors
 
-        # Create inputs for the stressor sandbox.
-        ms_stress_list[[s]] <- module_matrix_model_preview_stress_ui(ns(this_stressor_name))
-        print("Feb 11th fix....")
-        module_matrix_model_preview_stress_server(this_stressor_name, stressor_variable = this_stressor)
+        # Unique module ID: generation prefix + stressor name
+        mod_id <- paste0(gen_prefix, this_stressor_name)
 
+        # Create inputs for the stressor sandbox.
+        ms_stress_list[[s]] <- module_matrix_model_preview_stress_ui(ns(mod_id))
+        module_matrix_model_preview_stress_server(mod_id, stressor_variable = this_stressor)
       }
+
+      rv_initialized_servers(paste0(gen_prefix, ms_stress$Stressors))
 
       # Wrap all stressor cards in a grid container
       tags$div(
@@ -227,40 +248,30 @@ module_matrix_model_preview_server <- function(id) {
       
     })
     
-    # Updates input with JS is changed
+    # Updates input with JS when location is changed
     observeEvent(input$location_dropdown, {
-      
+
       req(session$userData$rv_stressor_magnitude$sm_dat)
-      
+
       # The new variable selected in the dropdown
       new_location <- input$location_dropdown
-      
+
       req(new_location != "")
-      
-      # Define the prefix and suffix patterns
-      # Note: Namespace is now matrix_model-mm_inputs-mm_preview since module moved to inputs tab
-      prefix <- "matrix_model-mm_inputs-mm_preview-"
-      suffixes <- c("-pm_ps_val_mean",
-                    "-pm_ps_val_sd",
-                    "-pm_ps_val_lwr",
-                    "-pm_ps_val_upr")
-      
-      
+
       locs <- session$userData$loc_sel_names$locs
       loc_id <- locs$id[locs$label == new_location][1]
       # Get stressor values for location
       sm <- session$userData$rv_stressor_magnitude$sm_dat[session$userData$rv_stressor_magnitude$sm_dat$HUC_ID == loc_id, ]
-      
+
+      # Get the current generation prefix so JS targets the right inputs
+      gen_prefix <- paste0("g", rv_stress_gen(), "_")
+
       build_list <- list()
-      
+
       for (m in 1:nrow(sm)) {
-        
+
         selected_variable <- sm$Stressor[m]
-        
-        # Define the new IDs for the inputs
-        new_ids <- paste0(prefix, selected_variable, suffixes)
-        new_ids <- paste0(selected_variable, suffixes)
-        
+
         # Named vector
         new_values <- list(
           mean = sm$Mean[m],
@@ -269,11 +280,12 @@ module_matrix_model_preview_server <- function(id) {
           upr = sm$Up_Limit[m],
           check = TRUE
         )
-        
-        build_list[[selected_variable]] <- new_values
-        
+
+        # Use generation-prefixed key so JS can build the correct input IDs
+        build_list[[paste0(gen_prefix, selected_variable)]] <- new_values
+
       }
-      
+
       # Send the data to JavaScript
       session$sendCustomMessage(type = "update_pop_model_sr_inputs", message = build_list)
       
@@ -795,10 +807,11 @@ module_matrix_model_preview_server <- function(id) {
         mtitle <- "Abundance"
         y_axe <- "N"
         
-        # Save data for population model scenario
+        # Save data for population model scenario (current run only)
+        current_only <- pdata_1[pdata_1$sim == "one", ]
         new_data <- data.frame(
           scenario_name = input$scenario_name,
-          N = pdata_1$value
+          N = current_only$value
         )
         # Store data in placholder slot
         session$userData$rv_pop_mod_scenarios$placeholder <- new_data

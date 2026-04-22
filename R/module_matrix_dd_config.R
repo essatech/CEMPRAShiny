@@ -10,14 +10,19 @@ module_matrix_dd_config_ui <- function(id) {
   tagList(
     shinyjs::useShinyjs(),
 
-    tags$h4("Define Density Dependence Bottlenecks: with life stage-specific carrying capacity"),
+    tags$h4("Define Density-Dependent Bottlenecks"),
 
     fluidRow(
       column(
         width = 12,
         tags$p(
-          "Configure which life stages have density-dependent constraints.
-          Select a function type (Beverton-Holt or Hockey-Stick) and the target life stage for each bottleneck.",
+          "Add one row for each life stage where density limits population growth. ",
+          "For each bottleneck, choose a ", tags$strong("function type"),
+          " (Beverton-Holt = asymptotic flow constraint on the transition ",
+          tags$em("into"), " the stage; Hockey-Stick = hard cap on abundance ",
+          tags$em("in"), " the stage) and the ", tags$strong("target life stage"),
+          " (the destination stage being constrained). ",
+          "You do not need a bottleneck at every stage \u2014 most systems have one or two key constraints.",
           class = "pm-ht"
         )
       )
