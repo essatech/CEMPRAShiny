@@ -238,12 +238,15 @@ module_matrix_model_preview_server <- function(id) {
       session$userData$loc_sel_names$locs <- locs
       
       # Update the selectize input
+      # Auto-select the first location so stressor values are populated
+      # immediately (critical when there is only one location, since the
+      # user cannot toggle the dropdown to trigger the observeEvent).
       updateSelectizeInput(
         session,
         inputId = "location_dropdown",
         choices = locs$label,
         server = TRUE,
-        selected = NULL
+        selected = locs$label[1]
       )
       
     })
@@ -267,6 +270,12 @@ module_matrix_model_preview_server <- function(id) {
       gen_prefix <- paste0("g", rv_stress_gen(), "_")
 
       build_list <- list()
+
+      if (nrow(sm) == 0) {
+        # No stressor magnitude data for this location — send empty update
+        session$sendCustomMessage(type = "update_pop_model_sr_inputs", message = build_list)
+        return()
+      }
 
       for (m in 1:nrow(sm)) {
 
@@ -306,34 +315,49 @@ module_matrix_model_preview_server <- function(id) {
         color = "#0073b7",
         text = paste0("Running a time series projection...")
       )
-      
+
       # -----------------------------------
       # Gather inputs in isolate mode
       isolate({
-        
+
         # Modal is hidden or reset
         session$userData$rv_show_sample_plot$open <- FALSE
         test_n_years <- input$test_n_years
         test_n_replicates <- input$test_n_replicates
+
+        # Validate numeric inputs
+        if (is.null(test_n_years) || is.na(test_n_years) || test_n_years < 1) {
+          test_n_years <- 50
+        }
+        if (is.null(test_n_replicates) || is.na(test_n_replicates) || test_n_replicates < 1) {
+          test_n_replicates <- 10
+        }
+        test_n_years <- as.integer(test_n_years)
+        test_n_replicates <- as.integer(test_n_replicates)
+
         dat <- session$userData$rv_life_stages$dat
-        
+
         # Gather the environmental stressors (if any)
         CE_df <- session$userData$rv_sandbox_stressors$dat
-        
+
         print("================================================")
         print("rv_sandbox_stressors$dat is set to:")
         print(as.data.frame(CE_df))
-        
-        
-        if (length(CE_df) == 0) {
+
+
+        if (!is.data.frame(CE_df) || length(CE_df) == 0) {
           CE_df <- data.frame()
         } else {
           # ---------------------------------
           # See if any enviro stressors present
-          CE_df <- CE_df[CE_df$check_on, ]
+          if ("check_on" %in% colnames(CE_df)) {
+            CE_df <- CE_df[CE_df$check_on, ]
+          } else {
+            CE_df <- data.frame()
+          }
         }
-        
-        
+
+
         if (nrow(CE_df) >= 1) {
           
           # Thin down stressors to target...
@@ -447,6 +471,9 @@ module_matrix_model_preview_server <- function(id) {
       
       
       
+      # Wrap projection in tryCatch so the spinner is always closed
+      tryCatch({
+
       # Gather population model inputs
       life_cycles <- isolate({
         session$userData$rv_life_stages$dat
@@ -456,53 +483,53 @@ module_matrix_model_preview_server <- function(id) {
       # MJB added July 18 2025
       n_stage_check <- life_cycles$Value[life_cycles$Name == "Nstage"]
       life_cycles <- CEMPRA::pop_model_dat_clean(dat = life_cycles, nstage_fill = n_stage_check)
-      
+
       p.cat <- life_cycles$Value[life_cycles$Name == "p.cat"]
       p.cat <- ifelse(length(p.cat) == 0, 0, p.cat)
       p.cat <- ifelse(is.na(p.cat), 0, p.cat)
-      
+
       # Setup objects for population model
       pop_mod_setup <-
         CEMPRA::pop_model_setup(life_cycles = life_cycles)
-      
+
       # Build matrix elements for population model
       pop_mod_mat <-
         CEMPRA::pop_model_matrix_elements(pop_mod_setup = pop_mod_setup)
-      
+
       print("Done setup...")
-      
+
       # Set the K.adj (K adjustment prior to pop model run)
       life_histories <- pop_mod_mat$life_histories
-      
+
       #  ===========================================================
       # Set default habitat capacity inputs
       K_input <- life_histories$Ka # Default adult carrying capacity K
       bh_dd_stages <- NULL # Character vector of life stages with K constraints
       stage_k_override <- NULL # Actual K constraints per location
-      
+
       # Gather the density-dependent inputs (if available)
       habitat_dd_k <- isolate({
         session$userData$rv_hab_densities$dat
       })
-      
+
       # ---------------------------
       # Run with habitat capacities
-      if (nrow(habitat_dd_k) == 0) {
+      if (is.null(habitat_dd_k) || nrow(habitat_dd_k) == 0) {
         habitat_dd_k <- NULL
       } else {
         # Determine if HUC ID is selected
         HUC_ID <- NA
-        if (is.null(input$location_dropdown)) {
+        if (is.null(input$location_dropdown) ||
+            is.na(input$location_dropdown) ||
+            input$location_dropdown == "") {
           HUC_ID <- NA
         } else {
-          
-          if (!(is.na(input$location_dropdown))) {
-            
+
             HUC_sel <- input$location_dropdown
             HUC_ID <- as.character(strsplit(HUC_sel, " - ")[[1]][1])
             HUC_ID <- as.numeric(HUC_ID)
-            
-            
+
+
             # Set up habitat and DD constraint
             hab_obj <- CEMPRA::build_k_for_proj_dd(
               habitat_dd_k = habitat_dd_k,
@@ -510,78 +537,77 @@ module_matrix_model_preview_server <- function(id) {
               life_histories = life_histories,
               life_cycle_params = life_cycles
             )
-            
+
             # Update K input for total anadromous spawners
             total_anadromous_spawners <- hab_obj$ret_total_anadromous_spawners
-            
+
             if (!(is.null(total_anadromous_spawners))) {
               if (total_anadromous_spawners > 0) {
                 # If there are anadromous fish, override the Ka value
                 K_input <- total_anadromous_spawners
-                
+
                 # However, only apply this in the model if bh_spawners or hs_spawners is set
                 if(!(("bh_spawners" %in% hab_obj$ret_bh_dd_stages) | ("hs_spawners" %in% hab_obj$ret_bh_dd_stages))) {
                   K_input <- 10000000
                   print("Setting K_input high...")
                 }
-                
+
               }
             }
-            
+
             # Udate K stages for density-dependent constraints
             bh_dd_s <- hab_obj$ret_bh_dd_stages
-            
+
             if (!(is.null(bh_dd_s))) {
               if (!(is.na(bh_dd_s[1]))) {
                 bh_dd_stages <- bh_dd_s
               }
             }
-            
+
             # Update K stages for density-dependent constraints
             sk_over <- hab_obj$ret_stage_k_override
-            
+
             if (!(is.null(sk_over))) {
               if (!(is.na(sk_over[1]))) {
                 stage_k_override <- sk_over
               }
             }
-            
-            
-          }
+
+
         }
       }
       # End of habitat capacities and DD constraints
       # ===========================================================
-      
+
       # Mathematical expression of the transition matrix
       life_stages_symbolic <-
         pop_mod_mat$life_stages_symbolic
-      
+
       # Mathematical expression of the density matrix
       density_stage_symbolic <-
         pop_mod_mat$density_stage_symbolic
-      
+
       # determine if anadromous
       anadromous <- pop_mod_setup$anadromous
-      
-      
+
+
       all_outputs <- list()
-      
+
       for (ii in 1:test_n_replicates) {
-        
+
         # Environmental sample for this rep
         if (is.null(CE_df)) {
           CE_df_rep <- CE_df
         } else {
           CE_df_rep <- CE_df[CE_df$simulation == ii, ]
         }
-        
+
         # If stage_k_override is NULL but bh_dd_stages is not NULL then set stage_k_override
         if(length(stage_k_override) == 0 & length(bh_dd_stages) > 0) {
           stage_k_override <- rep(NA, life_histories$Nstage + 1)
         }
-        
-        
+
+
         # ----------------------------------------------------------------
         # Run simple population projection - project forward through time
         # ----------------------------------------------------------------
@@ -606,31 +632,34 @@ module_matrix_model_preview_server <- function(id) {
             # Vector of life stages "dd_hs_0", "bh_stage_1" with DD
             bh_dd_stages = bh_dd_stages
           )
-        
-        # head(run_data$N)
-        # max(baseline$N[, 5])
-        # life_histories$Ka
-        # Gather
-        
+
         all_outputs[[ii]] <- run_data
       }
-      
+
       # Get the run counter
       run_counter <-
         session$userData$rv_pop_sample_plot_data$run_counter
-      
+
       # Send to reactive object
       session$userData$rv_pop_sample_plot_data$dat[[run_counter]] <-
         all_outputs
-      
+
       # Update the run counter
       session$userData$rv_pop_sample_plot_data$run_counter <-
         run_counter + 1
-      
+
       # Open the modal
       session$userData$rv_show_sample_plot$open <- TRUE
-      
-      
+
+      }, error = function(e) {
+        remove_modal_spinner()
+        showNotification(
+          paste("Population projection error:", e$message),
+          type = "error",
+          duration = 10
+        )
+      })
+
     })
     
     
@@ -776,12 +805,7 @@ module_matrix_model_preview_server <- function(id) {
         
         # Set burn-in years
         burn_in <- 0
-        if (is.na(input$samp_burn_in)) {
-          burn_in <- 0
-        }
-        if (input$samp_burn_in < 0) {
-          burn_in <- 0
-        } else {
+        if (!is.null(input$samp_burn_in) && !is.na(input$samp_burn_in) && input$samp_burn_in > 0) {
           burn_in <- input$samp_burn_in
         }
         
